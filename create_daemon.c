@@ -17,8 +17,8 @@
  *
  *    Creates a child process using fork()
  *    Kills the parent switching the ownership of the child to the init process
- *    Changes working directory to root
- *    Adds a new session and group for the process
+ *    Adds a new session (and group for the process)
+ *    Changes working directory to root and closes all file descriptors
  *    <-> A daemon created
  *
  *    Starts to execute the main SysLogger code:
@@ -34,18 +34,58 @@ int main(int args, char *argv[])
 
   if (pid == -1) {
     /*  Fork failed, return */
-    perror("Function [fork()] failed ");
+    perror("Function [ fork() ] failed ");
     return -1;
 
   }
   else if (pid > 0) {
     /* pid positive, parent process */
-    pause();
+    /*  exit from parent */
+    exit(0);
+
   }
 
   else {
-    /* Child process */
-    pause();
+    /*  Child process  */
+
+    /*  Unmask files and start a new session  */
+    umask(0);
+
+    if (setsid() < 0) {
+      /*  Failed to start a new session, exit */
+      perror("Function [ setsid() ] failed ");
+      exit(-1);
+    }
+
+    /*  Change working dir to root */
+    chdir("/");
+    /* Close open file descriptors: stdin, stdout and stderr  */
+    close(0);
+    close(1);
+    close(2);
+
+    /*
+     *    Now process is a daemon
+     *    Create a child process which starts handling log writing
+     *    Parent starts to handle thread syncronization and creation
+     */
+
+     pid = fork();
+
+     if (pid == -1) {
+       /* Fork failed, exit. User could be notified */
+       exit(-1);
+     }
+     else if (pid > 0) {
+       /* Parent, start syncronization  */
+       pause();
+     }
+     else {
+       /* child */
+       pause();
+     }
+
+
   }
 
 }

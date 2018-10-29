@@ -16,10 +16,16 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
+/*  Structs */
 
 
 /*  Function declarations */
+
+void main_thread(void);
+int create_thread(unsigned index, const char *pipe_name, pthread_t *threads);
+void *blocker_thread(void *ptr);
 
 
 

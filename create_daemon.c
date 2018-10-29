@@ -9,7 +9,6 @@
 
 
 
-
 /*
  *    Main for create_daemon
  *    Executed from terminal
@@ -78,7 +77,7 @@ int main(int args, char *argv[])
      }
      else if (pid > 0) {
        /* Parent, start syncronization  */
-       pause();
+        main_thread();
      }
      else {
        /* child */
@@ -88,4 +87,5 @@ int main(int args, char *argv[])
 
   }
 
+  return 0;
 }

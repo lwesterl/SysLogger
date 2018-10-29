@@ -5,9 +5,10 @@
  */
 
 
+#include "logger_header.h"
 
-
- int main(void)
- {
-   return 0;
- }
+int main(void)
+{
+ printf("hello logger\n");
+ return 0;
+}

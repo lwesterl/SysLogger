@@ -43,7 +43,7 @@ int create_thread(unsigned index, const char *pipe_name, pthread_t *threads)
   threads = realloc(threads, sizeof(pthread_t) * index);
   if (threads == NULL) {
     /*  Bad alloc, the best option is probably to exit the program  */
-    /*  IMPLEMENT     write reason for exit to the debug log */
+    /*  IMPLEMENT     write exit reason to the debug log */
     exit(-1);
   }
   return pthread_create( &threads[index -1], NULL, blocker_thread, (void *) pipe_name);

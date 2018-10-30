@@ -8,9 +8,10 @@
 CC = gcc
 CFLAGS = -Wall -pedantic
 Files = lib test_logger
-O_FILES = threading.o
+O_FILES = threading.o pipes.o list.o
 STATIC_F = ar rcs
 LPTH = -lpthread
+DEBUG = list_debug pipe_debug
 
 default:	all
 
@@ -27,8 +28,25 @@ test_logger:	logger_test.h
 threading.o:	logger_header.h
 	$(CC) $(CFLAGS) $(LPTH) -c threading.c
 
+pipes.o:	pipes.h
+	$(CC) $(CFLAGS) -c pipes.c
+
+list.o:	list.h
+	$(CC) $(CFLAGS) -c list.c
+
 clean:
-	$(RM) *.o logger_daemon test_logger liblogger.a
+	$(RM) *.o logger_daemon test_logger pipe_test list_test liblogger.a
 
 clean-objects:
 	$(RM) *.o
+
+
+#	DEBUG BUILDS
+
+debug: $(DEBUG)
+
+list_debug: list.h
+	$(CC) $(CFLAGS) list.c list_test.c -o list_test
+
+pipe_debug:	pipes.h
+	$(CC) $(CFLAGS) pipes.c pipes_test.c -o pipe_test

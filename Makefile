@@ -21,7 +21,7 @@ all:	$(Files)
 
 
 lib:	$(O_FILES) logger_header.h
-	$(STATIC_F) liblogger.a threading.o
+	$(STATIC_F) liblogger.a threading.o pipes.o list.o
 
 test_logger:	logger_test.h
 	$(CC) $(CFLAGS) logger_test.c -o test_logger

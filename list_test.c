@@ -52,5 +52,40 @@ int main(void)
 
 
   remove_all(first_entry);
+
+  /* Another test, now with removing non-active entries */
+  first_entry = List();
+  list = first_entry;
+  char pipename[20] = "test_pipe";
+  for (char i = 10; i < 20; i++)
+  {
+    pipename[9] = i+50;
+    add_entry(list, pipename);
+    list = first_entry;
+
+  }
+  printf("______ALL ENTRIES_____\n");
+  print_list(list);
+  list = first_entry;
+  /* Now clear status for all the entries */
+  clear_status(list);
+  list = first_entry;
+  /* Activate some entries */
+  for (char i = 10; i < 20; i+=2)
+  {
+    pipename[9] = i + 50;
+    /* Set active only some of the entries */
+    is_entry(list, pipename);
+    list = first_entry;
+
+  }
+  /* Try to remove non-active entries, only odd entries should remain */
+  printf("_______AFTER DEACTIVATING EVEN ENTRIES____\n");
+  first_entry = remove_non_active(list);
+  list = first_entry;
+  print_list(list);
+
+  /* Remove all */
+  remove_all(first_entry);
   return 0;
 }

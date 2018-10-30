@@ -76,7 +76,11 @@ void list_files(void)
     {
       /*  Pick only named pipes, fifos  */
       if (dir_object->d_type == DT_FIFO) {
-        printf("%s\n", dir_object->d_name);
+        if (strstr(dir_object->d_name, "syslogger")) {
+          /* Pipe is created by the program */
+          printf("%s\n", dir_object->d_name);
+        }
+
       }
     }
     closedir(dirp);

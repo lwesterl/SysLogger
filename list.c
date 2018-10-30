@@ -20,6 +20,8 @@ list_t *List(void)
   /*  A good practise would be to check return value of malloc  */
   new_list->prev = NULL;
   new_list->next = NULL;
+  new_list->status = 1;
+  new_list->fifoname[0] = 0; /* Init to empty */
   return new_list;
 }
 
@@ -27,6 +29,7 @@ list_t *List(void)
  *    Adds given filename to the linked list structure
  *    list_first is a pointer to the first list item
  *    fname is the fifoname for the entry to be added
+ *    Set status char 1 (pipe is active)
  *    Returns pointer to the new list item
  */
 
@@ -35,6 +38,7 @@ list_t *add_entry(list_t *list_first, const char fname[])
   /*  Check if this is the first list item created which hasn't got a fifoname */
   if (list_first->fifoname[0] == 0) {
     strncpy(list_first->fifoname, fname, 20);
+    list_first->status = 1; /* Set status */
     return list_first;
 
   }
@@ -52,6 +56,7 @@ list_t *add_entry(list_t *list_first, const char fname[])
     strncpy(new->fifoname, fname, 20);
     new->prev = list_first;
     new->next = NULL;
+    new->status = 1; /* Set status */
     return new;
 
   }
@@ -120,7 +125,7 @@ list_t *remove_entry(list_t *list, const char fname[])
  *    Removes all list entries
  *    As argument gets pointer to start of the list
  *
- *    This should be called when SysLogger is stopped
+ *    This should be called when SysLogger is stopped (E.g. after receiving SIGTERM)
  *    Otherwise memory used to store the list is leaked
  */
 
@@ -143,6 +148,7 @@ void remove_all(list_t *list)
 /*
  *    Checks if fifoname givens as parameter fname exits in the linked
  *    list. The first entry of the list is given as argument
+ *    Set status 1 if name exists
  *    Return 1 if name exists and 0 if it doesn't
  */
 
@@ -153,6 +159,7 @@ int is_entry(list_t *list, const char fname[])
   {
     if (strcmp(list->fifoname, fname) == 0) {
       /*  Found a matching name */
+      list->status = 1;
       return 1;
     }
     else {
@@ -162,6 +169,85 @@ int is_entry(list_t *list, const char fname[])
   /* No match found */
   return 0;
 
+}
+
+
+/*
+ *    Removes all entries from the list which status is 0 (the plain base entry cannot be removed)
+ *    Used to remove non-active pipes (pipe doesn't exists anymore) from the
+ *    list. Called from the main thread
+ *    Returns pointer to the start of the list
+ */
+
+list_t  *remove_non_active(list_t *list)
+{
+  /* Check if there is only one entry */
+  if ((list->status == 0) && (list->next == NULL) && (list->prev == NULL)) {
+    if (list->fifoname[0] == 0) {
+      /* Only the base entry left, cannot be removed  */
+      return list;
+    }
+    else {
+      /*  Create a new plain base entry */
+      free(list);
+      return List();
+
+    }
+
+  }
+
+  list_t *start = list;
+  while(list != NULL)
+  {
+    if (list->status == 0) {
+      /* Remove the entry */
+      list_t *temp_next = list->next;
+      list_t *temp_prev = list->prev;
+      if (temp_prev != NULL && temp_next != NULL) {
+        /*  Safe to relink entries */
+        temp_prev->next = temp_next;
+        temp_next->prev = temp_prev;
+        free(list);
+        list = temp_next;
+      }
+      else if (temp_prev == NULL) {
+        /* Removing the first entry */
+        temp_next->prev = NULL;
+        free(list);
+        list = temp_next;
+        /*  Also list has now new start pointer */
+        start = list;
+      }
+      else if(temp_next == NULL) {
+        /* Removing the last entry */
+        temp_prev->next = NULL;
+        free(list);
+        list = temp_prev;
+      }
+
+    }
+    /* Go to the next entry */
+    list = list->next;
+  }
+  return start;
+}
+
+
+/*
+ *    Sets list status for all entries to 0
+ *    Intended to be called before checking which fifos still exits
+ *    After checking fifos, non-active entries cleared with remove_non_active
+ *    Argument is pointer to the start of the linked list
+ */
+
+void clear_status(list_t *list)
+{
+  while (list != NULL)
+  {
+    /* Set status to 0 */
+    list->status = 0;
+    list = list->next;
+  }
 }
 
 /*

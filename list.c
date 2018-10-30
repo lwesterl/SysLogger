@@ -22,6 +22,7 @@ list_t *List(void)
   new_list->next = NULL;
   new_list->status = 1;
   new_list->fifoname[0] = 0; /* Init to empty */
+  new_list->thread = NULL;
   return new_list;
 }
 
@@ -57,6 +58,7 @@ list_t *add_entry(list_t *list_first, const char fname[])
     new->prev = list_first;
     new->next = NULL;
     new->status = 1; /* Set status */
+    new->thread = NULL;
     return new;
 
   }

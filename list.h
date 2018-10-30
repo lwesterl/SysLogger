@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <pthread.h>
 
 /*    STRUCTS   */
 
@@ -21,6 +22,8 @@ typedef struct list {
   char status;  /* 1 == struct matching pipe still active, 0 == pipe removed */
   struct list *next;
   struct list *prev;
+  pthread_t *thread; /* Pointer to the thread which handles the fifo */
+
 } list_t;
 
 

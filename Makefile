@@ -7,6 +7,7 @@
 
 CC = gcc
 CFLAGS = -Wall -pedantic
+DFLAGS = -Wall -pedantic -g
 Files = lib test_logger
 O_FILES = threading.o pipes.o list.o
 STATIC_F = ar rcs
@@ -46,7 +47,7 @@ clean-objects:
 debug: $(DEBUG)
 
 list_debug: list.h
-	$(CC) $(CFLAGS) list.c list_test.c -o list_test
+	$(CC) $(DFLAGS) list.c list_test.c -o list_test
 
 pipe_debug:	pipes.h
-	$(CC) $(CFLAGS) pipes.c pipes_test.c -o pipe_test
+	$(CC) $(DFLAGS) pipes.c pipes_test.c -o pipe_test

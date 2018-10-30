@@ -12,6 +12,5 @@
 int main(void)
 {
   create_fifo();
-  list_files();
   return 0;
 }

@@ -10,6 +10,7 @@
 
 #include "pipes.h"
 
+
 /*
  *    Creates a new fifo (named pipe) to /tmp
  *    Fifo name is concatenation of /tmp/syslogger and callers pid
@@ -43,6 +44,7 @@ void create_fifo(void)
  *    Mode is either FIFO_WRITE or FIFO_READ (check pipe.h)
  *    Returns file descriptor to the fifo
  */
+
 int open_fifo(char *fifoname, unsigned char mode)
 {
   int fd;
@@ -54,48 +56,4 @@ int open_fifo(char *fifoname, unsigned char mode)
   }
 
   return fd;
-}
-
-/*
- *    Goes through all named pipes in /tmp
- *    Picks the pipes which names contain syslogger-string
- */
-
-void list_files(void)
-{
-
-  DIR *dirp;  /*  Directory stream */
-  struct dirent *dir_object; /* dirent defined in dirent.h */
-
-  /*  Open /tmp */
-  dirp = opendir("/tmp");
-
-  if (dirp) {
-    /* Go through dir content */
-    while ((dir_object = readdir(dirp)) != NULL)
-    {
-      /*  Pick only named pipes, fifos  */
-      if (dir_object->d_type == DT_FIFO) {
-        if (strstr(dir_object->d_name, "syslogger")) {
-          /* Pipe is created by the program */
-          printf("%s\n", dir_object->d_name);
-        }
-
-      }
-    }
-    closedir(dirp);
-  }
-}
-
-
-/*
- *    Check is pipename is already added
- *    all_pipes is a linked list of pipenames
- *    If not added adds the pipename to all_pipes
- */
-
-int is_added(char *pipename, char **all_pipes)
-{
-
-
 }

@@ -33,7 +33,6 @@
 
 void create_fifo(void);
 int open_fifo(char *fifoname, unsigned char mode);
-void list_files(void);
 
 
 

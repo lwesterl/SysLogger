@@ -155,9 +155,8 @@ void remove_all(list_t *list)
     list = temp_next;
   }
   /*  Now remove the final entry */
-  printf("REMOVING \n");
+  
   if (list->thread != NULL) {
-    printf("NOT NULL REMOVING \n");
     free(list->thread);
   }
   free(list);

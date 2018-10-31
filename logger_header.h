@@ -18,19 +18,26 @@
 #include <sys/stat.h>
 #include <pthread.h>
 #include <errno.h>
+#include <signal.h>
 #include "list.h"
 #include "pipes.h"
 
 
-/*  Structs */
-
+/*  Global variables */
+extern volatile sig_atomic_t terminated;
 
 /*  Function declarations */
-
+/* In threading.c */
 void main_thread(void);
 int create_thread(const char *pipe_name, pthread_t *threads);
 void *blocker_thread(void *ptr);
 void list_files(list_t *list);
+void cancel_all (list_t *list);
+void cancel_non_active (list_t *list);
+
+/* In signal_handler.c */
+void signal_handler(int sig);
+
 
 
 

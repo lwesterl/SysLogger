@@ -40,6 +40,7 @@ list_t *add_entry(list_t *list_first, const char fname[])
   if (list_first->fifoname[0] == 0) {
     strncpy(list_first->fifoname, fname, 20);
     list_first->status = 1; /* Set status */
+    list_first->thread = malloc(sizeof(pthread_t));
     return list_first;
 
   }
@@ -58,7 +59,7 @@ list_t *add_entry(list_t *list_first, const char fname[])
     new->prev = list_first;
     new->next = NULL;
     new->status = 1; /* Set status */
-    new->thread = NULL;
+    new->thread = malloc(sizeof(pthread_t));
     return new;
 
   }
@@ -154,6 +155,11 @@ void remove_all(list_t *list)
     list = temp_next;
   }
   /*  Now remove the final entry */
+  printf("REMOVING \n");
+  if (list->thread != NULL) {
+    printf("NOT NULL REMOVING \n");
+    free(list->thread);
+  }
   free(list);
 }
 
@@ -202,7 +208,9 @@ list_t  *remove_non_active(list_t *list)
     }
     else {
       /*  Create a new plain base entry */
+      printf("hello removal \n");
       if (list->thread != NULL) {
+        printf("removal success \n");
         free(list->thread);
       }
       free(list);

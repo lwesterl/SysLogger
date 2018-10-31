@@ -9,10 +9,12 @@ CC = gcc
 CFLAGS = -Wall -pedantic
 DFLAGS = -Wall -pedantic -g
 Files = lib test_logger
-O_FILES = threading.o pipes.o list.o
+O_FILES = threading.o pipes.o list.o signal_handler.o
 STATIC_F = ar rcs
 LPTH = -lpthread
-DEBUG = list_debug pipe_debug
+DEBUG = list_debug pipe_debug thread_debug
+EXE = logger_daemon test_logger thread_test list_test pipe_test
+
 
 default:	all
 
@@ -21,7 +23,7 @@ all:	$(Files)
 
 
 lib:	$(O_FILES) logger_header.h
-	$(STATIC_F) liblogger.a threading.o pipes.o list.o
+	$(STATIC_F) liblogger.a ${O_FILES}
 
 test_logger:	$(lib)
 	$(CC) $(CFLAGS) logger_test.c -L. -l logger $(LPTH) -o test_logger
@@ -35,11 +37,14 @@ pipes.o:	pipes.h
 list.o:	list.h
 	$(CC) $(CFLAGS) -c list.c
 
+signal_handler.o: logger_header.h
+	$(CC) $(CFLAGS) -c signal_handler.c
+
 clean:
-	$(RM) *.o logger_daemon test_logger pipe_test list_test liblogger.a
+	$(RM) ${O_FILES} ${EXE} liblogger.a
 
 clean-objects:
-	$(RM) *.o
+	$(RM) ${O_FILES}
 
 
 #	DEBUG BUILDS
@@ -50,4 +55,10 @@ list_debug: list.h
 	$(CC) $(DFLAGS) list.c list_test.c -o list_test
 
 pipe_debug:	pipes.h
-	$(CC) $(DFLAGS) pipes.c pipes_test.c -o pipe_test
+	$(CC) $(DFLAGS) pipes.c pipes_test.c threading.c signal_handler.c list.c $(LPTH) -o pipe_test
+
+thread_debug: logger_test.h
+	$(CC) $(DFLAGS) logger_test.c pipes.c list.c signal_handler.c threading.c  $(LPTH) -o thread_test
+
+test_memory:	thread_test
+	valgrind --leak-check=yes ./thread_test

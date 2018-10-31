@@ -17,6 +17,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <errno.h>
+#include <signal.h>
 #include "list.h"
 
 
@@ -33,10 +35,13 @@
 #define FIFO_NAME_LEN 20
 
 
+/* Global variables */
+extern volatile sig_atomic_t terminated;
+
 /*  Function declarations */
 
 void create_fifo(void);
-int open_fifo(char *fifoname, unsigned char mode);
+int open_fifo_read(char *fifoname);
 void concat_path(char *dest, const char *source);
 
 

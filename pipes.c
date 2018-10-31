@@ -40,23 +40,17 @@ void create_fifo(void)
 
 
 /*
- *    Tries to open the fifo which names is given as argument in correct mode
- *    Mode is either FIFO_WRITE or FIFO_READ (check pipe.h)
- *    Blocks until fifo is opened for a write
- *    Returns file descriptor to the fifo
+ *    Opens the fifo which names is given as argument
+ *    Opens in non-blocking mode -> should always succeed
+ *    (even if the fifo isn't opened for writing)
  */
 
-int open_fifo(char *fifoname, unsigned char mode)
+int open_fifo_read(char *fifoname)
 {
-  int fd;
-  if (mode == FIFO_READ) {
-    fd = open(fifoname, O_RDONLY);
-  }
-  else {
-    fd = open(fifoname, O_WRONLY);
-  }
-
+  int fd = -2;
+  fd = open(fifoname, O_RDONLY | O_NONBLOCK);
   return fd;
+
 }
 
 

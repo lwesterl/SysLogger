@@ -27,12 +27,17 @@
 /*  Fifo open modes, read mode and write mode, stored as an unsigned char */
 #define FIFO_READ 1
 #define FIFO_WRITE 2
+/* Max amount of bytes that can be written/read from fifo */
+#define MAX_BYTES 200
+/* Fifo name length ( /tmp/sysloggerxxxxx0, 0 == '\0' ) */
+#define FIFO_NAME_LEN 20
 
 
 /*  Function declarations */
 
 void create_fifo(void);
 int open_fifo(char *fifoname, unsigned char mode);
+void concat_path(char *dest, const char *source);
 
 
 

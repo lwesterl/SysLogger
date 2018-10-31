@@ -78,6 +78,10 @@ list_t *remove_entry(list_t *list, const char fname[])
   if ((list->next == NULL) && (list->prev == NULL) &&
     (strcmp(list->fifoname, fname) == 0))
     {
+      if (list->thread != NULL) {
+        /* Free thread resources first */
+        free(list->thread);
+      }
       free(list);
       return List();
     }
@@ -112,6 +116,10 @@ list_t *remove_entry(list_t *list, const char fname[])
 
 
       /*  Free the current list entry and exit this function */
+      if (list->thread != NULL) {
+        /* Free the thread resources first */
+        free(list->thread);
+      }
       free(list);
       break;
     }
@@ -139,6 +147,9 @@ void remove_all(list_t *list)
     list_t *temp_next = list->next;
     temp_next->prev = NULL;
     /*  Free list  and reassign its memory address */
+    if (list->thread != NULL) {
+      free(list->thread);
+    }
     free(list);
     list = temp_next;
   }
@@ -191,6 +202,9 @@ list_t  *remove_non_active(list_t *list)
     }
     else {
       /*  Create a new plain base entry */
+      if (list->thread != NULL) {
+        free(list->thread);
+      }
       free(list);
       return List();
 
@@ -209,12 +223,20 @@ list_t  *remove_non_active(list_t *list)
         /*  Safe to relink entries */
         temp_prev->next = temp_next;
         temp_next->prev = temp_prev;
+        if (list->thread != NULL) {
+          /* Remove also thread resources */
+          free(list->thread);
+        }
         free(list);
         list = temp_next;
       }
       else if (temp_prev == NULL) {
         /* Removing the first entry */
         temp_next->prev = NULL;
+        if (list->thread != NULL) {
+          /* Remove also thread resources */
+          free(list->thread);
+        }
         free(list);
         list = temp_next;
         /*  Also list has now new start pointer */
@@ -223,6 +245,10 @@ list_t  *remove_non_active(list_t *list)
       else if(temp_next == NULL) {
         /* Removing the last entry */
         temp_prev->next = NULL;
+        if (list->thread != NULL) {
+          /* Remove also thread resources */
+          free(list->thread);
+        }
         free(list);
         list = temp_prev;
       }

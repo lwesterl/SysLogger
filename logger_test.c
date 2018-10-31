@@ -1,17 +1,21 @@
 /*
  *    Author: Lauri Westerholm
+ *
  *    Test Main for the SysLogger program
- *    Starts a daemon process
+ *    Not intendent to be used in final implementation of the program
  */
 
 
 #include "logger_test.h"
 
 
-/* NOT IMPLEMENTED */
+
 
 int main(void)
 {
- printf("hello logger\n");
+ /* Start the main thread */
+ printf("STARTING UP\n");
+ main_thread();
+
  return 0;
 }

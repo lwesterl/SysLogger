@@ -5,10 +5,6 @@
 
  #include "logger_header.h"
 
-// pthread_detach(pthread_t thread)
-// int pthread_create (pthread_t *thread, const pthread_attr_t *attr,
-//                      void  *(*start_routine) (void *), void *arg)
-
 
 
 
@@ -23,21 +19,32 @@
 
 void main_thread(void)
 {
-  /* Thread counter */
-  unsigned threads_count = 0;
 
   /*  Construct an empty linked list of for fifonames, their status and
       pthread_t pointers  */
+
   list_t *list = List();
   list_t *list_begin = list; /* Pointer to the start of the list */
 
   /*  Execute this loop until terminated by SIGTERM */
   while(1)
   {
-    /*  Check if new public pipes (which have the standard name) are added  */
-    threads_count = list_files(list, threads_count);
-    /* Remove non-active fifos (and their threads) */
-    /* IMPLEMENT */
+    /* First clear all the status bytes from the list entries */
+    clear_status(list);
+    list = list_begin; /* Reset pointer to the start of the list */
+
+    /*  Check if new public pipes (which have the standard name) are added
+        This also sets correct status for all the entries so that non-active
+        can be removed easily
+    */
+
+    list_files(list);
+
+    /* Remove non-active fifos (and their threads),
+     returns new pointer to the first entry */
+    list_begin = remove_non_active(list_begin);
+    list = list_begin; /* Reset pointer to the start of the list */
+
   }
 
 }
@@ -45,13 +52,13 @@ void main_thread(void)
 /*
  *    Create a posix thread, pthread
  *    Return 1 if was successful, 0 if failed
- *    index is the new amount of threads
  */
 
-int create_thread(unsigned index, const char *pipe_name, pthread_t *threads)
+int create_thread(const char *pipe_name, pthread_t *threads)
 {
-  /*  Realloc memory for a new pthread_t */
-  threads = realloc(threads, sizeof(pthread_t) * index);
+  /*  Alloc memory for a new pthread_t */
+  printf("creating thread\n");
+  threads = malloc(sizeof(pthread_t));
   if (threads == NULL) {
     /*  Bad alloc, now program should exit gracefully  */
     /* NOT IMPLEMENTED */
@@ -70,7 +77,7 @@ int create_thread(unsigned index, const char *pipe_name, pthread_t *threads)
     /* IMPLEMENT TERMINATING OF PROGRAM */
   }
   /* Create a new thread */
-  int ret = pthread_create( &threads[index -1], &attr, blocker_thread, (void *) pipe_name);
+  int ret = pthread_create( threads, &attr, blocker_thread, (void *) pipe_name);
   pthread_attr_destroy(&attr);
   return ret;
 }
@@ -91,6 +98,41 @@ void *blocker_thread(void *ptr)
 {
   /*  Acquire pipename from casting the input */
   char *pipename = (char *) ptr;
+  printf("hello, I am a new thread \n");
+  printf("Pipename: %s\n", pipename);
+
+  /* Open fifo matching the pipename, blocks until the fifo is opened for write */
+  int fd = open_fifo(pipename, FIFO_READ);
+
+  if (fd == -1) {
+    /* Opening failed, this shouldn't happen */
+    /* Write a log entry and exit thread */
+    perror("FIFO opening error:");
+    pthread_exit(NULL);
+
+  }
+
+  size_t bytes_read = 0;
+  char content[MAX_BYTES];
+
+  /* Start to read the fifo and block until the fifo isn't empty */
+  while (1) {
+    bytes_read = read(fd, &content, MAX_BYTES);
+    if (bytes_read > 0) {
+      /* Successfullly read fifo content */
+      break;
+    }
+    else if (bytes_read == -1) {
+      /* Error, write errno to the error log and exit thread */
+      /* IMPLEMENT */
+      pthread_exit(NULL);
+    }
+  }
+  /* Write an log entry */
+  printf("Content: %s\n", content);
+
+
+
   /* Exit without stopping other threads */
   pthread_exit(NULL);
 }
@@ -105,11 +147,9 @@ void *blocker_thread(void *ptr)
  *    Adds entries for new pipes by calling add_entry
  *    Start a new thread for every new pipe by calling create_thread
  *    Pointer to the thread is stored in the list
- *
- *    Returns new value for index
  */
 
-unsigned list_files(list_t *list, unsigned index)
+void list_files(list_t *list)
 {
   list_t *start = list; /* Pointer to the start of the list */
 
@@ -128,7 +168,7 @@ unsigned list_files(list_t *list, unsigned index)
         if (strstr(dir_object->d_name, "syslogger")) {
 
           /* Pipe is created by the program */
-          printf("%s\n", dir_object->d_name);
+          //printf("%s\n", dir_object->d_name);
           /* Check if the list contains the fifo */
 
           if (is_entry(list, dir_object->d_name) == 0) {
@@ -137,12 +177,18 @@ unsigned list_files(list_t *list, unsigned index)
             list = start;
             list_t *new = add_entry(list, dir_object->d_name);
 
+            /* Create a pipename string */
+            char pipename[FIFO_NAME_LEN];
+            concat_path(pipename, dir_object->d_name);
+
             /*  Create a new thread which gets pipename as argument */
-            index++;
-            if ( create_thread(index, dir_object->d_name, new->thread) != 0 ) {
+            if ( create_thread(pipename, new->thread) != 0 ) {
               /* Failed, now program should exit gracefully */
               /* NOT IMPLEMENTED */
+              printf("FAILED !\n");
             }
+
+            printf("A thread created \n");
 
           }
           list = start; /* Set list back to the start of the list */
@@ -153,6 +199,4 @@ unsigned list_files(list_t *list, unsigned index)
     closedir(dirp);
   }
 
-  /* Return the new index */
-  return index;
 }

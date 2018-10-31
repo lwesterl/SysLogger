@@ -23,8 +23,8 @@ all:	$(Files)
 lib:	$(O_FILES) logger_header.h
 	$(STATIC_F) liblogger.a threading.o pipes.o list.o
 
-test_logger:	logger_test.h
-	$(CC) $(CFLAGS) logger_test.c -o test_logger
+test_logger:	$(lib)
+	$(CC) $(CFLAGS) logger_test.c -L. -l logger $(LPTH) -o test_logger
 
 threading.o:	logger_header.h
 	$(CC) $(CFLAGS) $(LPTH) -c threading.c

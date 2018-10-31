@@ -8,7 +8,7 @@
 
 /*  C libraries */
 
-#include <stdio.h>
+#include "logger_header.h"
 
 
 #endif

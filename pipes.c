@@ -21,11 +21,11 @@ void create_fifo(void)
 {
   pid_t pid = getpid();
   /*  By cat /proc/sys/kernel/pid_max, max pid = 32768
-      Thus, 6 chars should be enough for all pids
+      Thus, 6 (5 + '/0') chars should be enough for all pids
       And we need 14 + 6 = 20 chars for all fifo names */
 
   /*  Create fifoname string  */
-  char fifoname[20];
+  char fifoname[FIFO_NAME_LEN];
   strncpy(fifoname, "/tmp/syslogger", 15); /* Add also null terminator */
   char pid_str[6];
   snprintf(pid_str, 6, "%d", pid);
@@ -42,6 +42,7 @@ void create_fifo(void)
 /*
  *    Tries to open the fifo which names is given as argument in correct mode
  *    Mode is either FIFO_WRITE or FIFO_READ (check pipe.h)
+ *    Blocks until fifo is opened for a write
  *    Returns file descriptor to the fifo
  */
 
@@ -56,4 +57,18 @@ int open_fifo(char *fifoname, unsigned char mode)
   }
 
   return fd;
+}
+
+
+/*
+ *    Concats input string (sysloggerxxxxx) and path (/tmp/)
+ *    Two arguments: dest buffer, source buffer
+ *    source buffer should contain sysloggerxxxxx string (strlen )
+ *    dest buffer should have space for FIFO_NAME_LEN chars (and be empty)
+ */
+void concat_path(char *dest, const char *source)
+{
+  strncpy(dest, "/tmp/", 6); /* Copy also terminator */
+  /* Starts from the terminator and adds 14 chars + '/0'  */
+  strncat(dest, source, 14);
 }

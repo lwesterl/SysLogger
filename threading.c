@@ -5,7 +5,8 @@
 
  #include "logger_header.h"
 
-
+/* Global variable */
+volatile sig_atomic_t terminated = 0;
 
 
 /*
@@ -19,6 +20,12 @@
 
 void main_thread(void)
 {
+  /* Connect a real basic signal handler */
+  struct sigaction sig_action = {.sa_handler = signal_handler};
+  sig_action.sa_flags = 0;
+
+  sigaction(SIGTERM, &sig_action, NULL);
+  sigaction(SIGINT, &sig_action, NULL);
 
   /*  Construct an empty linked list of for fifonames, their status and
       pthread_t pointers  */
@@ -27,8 +34,24 @@ void main_thread(void)
   list_t *list_begin = list; /* Pointer to the start of the list */
 
   /*  Execute this loop until terminated by SIGTERM */
+
   while(1)
   {
+    if (terminated) {
+      /* Cancel all threads */
+
+      cancel_all(list);
+      printf("ALL canceled \n");
+
+      /* Free all the list entries */
+      /* sleep gives other threads time to exit cleanly before the structs are freed */
+      sleep(1);
+      remove_all(list_begin);
+
+      /* EXIT */
+      exit(0);
+    }
+
     /* First clear all the status bytes from the list entries */
     clear_status(list);
     list = list_begin; /* Reset pointer to the start of the list */
@@ -39,8 +62,9 @@ void main_thread(void)
     */
 
     list_files(list);
+    list = list_begin;
 
-    /* Remove non-active fifos (and their threads),
+    /* Remove non-active fifo entries (and their pthread structs),
      returns new pointer to the first entry */
     list_begin = remove_non_active(list_begin);
     list = list_begin; /* Reset pointer to the start of the list */
@@ -56,9 +80,9 @@ void main_thread(void)
 
 int create_thread(const char *pipe_name, pthread_t *threads)
 {
-  /*  Alloc memory for a new pthread_t */
+
   printf("creating thread\n");
-  threads = malloc(sizeof(pthread_t));
+
   if (threads == NULL) {
     /*  Bad alloc, now program should exit gracefully  */
     /* NOT IMPLEMENTED */
@@ -96,16 +120,24 @@ int create_thread(const char *pipe_name, pthread_t *threads)
 
 void *blocker_thread(void *ptr)
 {
+  /* Set cancel state to asynchronous */
+  if (pthread_setcancelstate(PTHREAD_CANCEL_ASYNCHRONOUS, NULL) != 0) {
+    /* Error */
+    printf("Error in cancel state, thread exits \n");
+    pthread_exit(NULL);
+  }
+
   /*  Acquire pipename from casting the input */
   char *pipename = (char *) ptr;
   printf("hello, I am a new thread \n");
   printf("Pipename: %s\n", pipename);
 
   /* Open fifo matching the pipename, blocks until the fifo is opened for write */
-  int fd = open_fifo(pipename, FIFO_READ);
+  int fd = open_fifo_read(pipename);
+  free(pipename); /* Free the heap buffer */
 
-  if (fd == -1) {
-    /* Opening failed, this shouldn't happen */
+  if (fd < 0) {
+    /* Opening failed */
     /* Write a log entry and exit thread */
     perror("FIFO opening error:");
     pthread_exit(NULL);
@@ -113,18 +145,26 @@ void *blocker_thread(void *ptr)
   }
 
   size_t bytes_read = 0;
-  char content[MAX_BYTES];
+  char content[MAX_BYTES] = "";
 
-  /* Start to read the fifo and block until the fifo isn't empty */
+  /* Start to read the fifo in non-blocking mode until the fifo isn't empty
+     If fifo is empty 0 bytes are returned. If fifo is deleted the thread will
+     get stuck, only terminating whole program will cause the thread to exit */
+
   while (1) {
     bytes_read = read(fd, &content, MAX_BYTES);
     if (bytes_read > 0) {
       /* Successfullly read fifo content */
       break;
     }
-    else if (bytes_read == -1) {
-      /* Error, write errno to the error log and exit thread */
-      /* IMPLEMENT */
+    else if (terminated) {
+      /* Program terminated, exit */
+      close(fd);
+      pthread_exit(NULL);
+    }
+    else if (errno != EAGAIN && bytes_read < 0) {
+      /* Some fatal error exit, shouldn't happen */
+      close(fd);
       pthread_exit(NULL);
     }
   }
@@ -134,6 +174,7 @@ void *blocker_thread(void *ptr)
 
 
   /* Exit without stopping other threads */
+  close(fd);
   pthread_exit(NULL);
 }
 
@@ -178,7 +219,7 @@ void list_files(list_t *list)
             list_t *new = add_entry(list, dir_object->d_name);
 
             /* Create a pipename string */
-            char pipename[FIFO_NAME_LEN];
+            char *pipename = malloc(FIFO_NAME_LEN * sizeof(char));
             concat_path(pipename, dir_object->d_name);
 
             /*  Create a new thread which gets pipename as argument */
@@ -186,6 +227,9 @@ void list_files(list_t *list)
               /* Failed, now program should exit gracefully */
               /* NOT IMPLEMENTED */
               printf("FAILED !\n");
+            }
+            if (new-> thread == NULL) {
+              printf("Thread: NULL\n");
             }
 
             printf("A thread created \n");
@@ -199,4 +243,54 @@ void list_files(list_t *list)
     closedir(dirp);
   }
 
+}
+
+
+/*
+ *    Cancels all threads apart from the main thread
+ *    Goes through the list and calls pthread_cancel
+ *    Gets list_t pointer list as argument
+ *
+ *    This functions is intended to force threads to exit if the haven't done it
+ *    itself
+ */
+
+void cancel_all (list_t *list)
+{
+  while (list != NULL)
+  {
+    if (list->thread != NULL) {
+      /* There is still a allocated pthread_t struct */
+      if ( pthread_cancel((*(list->thread))) != 0) {
+        /* Error is usually ::success meaning that the thread has already exited cleanly */
+        perror("Error in canceling threads: ");
+      }
+    }
+
+    /*  Move the pointer to the next entry */
+    list = list->next;
+  }
+}
+
+
+/*
+ *    Cancels all threads which are non-active
+ *    Get list_t list pointer as argument
+ */
+
+void cancel_non_active (list_t *list)
+{
+  while(list != NULL)
+  {
+    if ((list->status == 0) && (list->thread != NULL))
+    {
+      /* Send cancel request */
+      if ( pthread_cancel((*(list->thread))) != 0) {
+        /* Error */
+        perror("Error canceling thread: ");
+      }
+    }
+    /* Move pointer */
+    list = list->next;
+  }
 }

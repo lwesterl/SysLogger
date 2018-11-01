@@ -12,8 +12,41 @@
 /*
  *    Main for SysLogger program
  *    Executed from terminal
- *    Starts SysLogger program as a daemon (a traditional deamon process)
  *
+ *    Agrs: start/stop
+ *    Start:
+ *      Starts SysLogger program as a daemon (a traditional deamon process)
+ *    Stop:
+ *      Stops running SysLogger daemon
+ */
+
+int main(int args, char *argv[])
+{
+  /* Check args */
+  if (args != 2) {
+    printf("Function [ SysLogger ] invalid args: SysLogger start/stop \n");
+    return 0;
+  }
+  else if (strcmp(argv[1], "start") == 0) {
+    /* Start SysLogger */
+    start_SysLogger();
+  }
+  else if (strcmp(argv[1], "stop") == 0) {
+    /* Stop SysLogger */
+    stop_SysLogger();
+  }
+  else {
+    printf("Function [ SysLogger ] invalid args: SysLogger start/stop \n");
+    return 0;
+  }
+
+  return 1;
+}
+
+
+
+/*
+ *    Creating SysLogger daemon process:
  *    Closes all excessive file descriptors
  *    Creates a child process using fork()
  *    Adds a new session (and group for the process) to the child
@@ -27,15 +60,13 @@
  *      - Starts to manage syncronization and thread creation
  */
 
-int main(int args, char *argv[])
-{
-
+void start_SysLogger(void) {
   /* Close all files descriptors apart from stdin, stdout, stderr */
 
   struct rlimit limits;
   if (getrlimit(RLIMIT_NOFILE, &limits) != 0) {
     printf ("Setting up daemon failed\n");
-    return -1;
+    exit(-1);
   }
 
   /* Close all file descriptors from 3 to the soft limit
@@ -58,7 +89,7 @@ int main(int args, char *argv[])
     /*  Fork failed, return */
     perror("Function [ fork() ] failed ");
     printf("Setting up SysLogger daemon failed \n");
-    return -1;
+    exit(-1);
 
   }
   else if (pid > 0) {
@@ -198,17 +229,51 @@ int main(int args, char *argv[])
 
   }
 
-  return 0;
 }
 
+/*
+ *    Stop SysLogger daemon
+ *    Get running daemon process id from PID_FILE
+ *    Sends SIGTERM to the id  and id + 1 and removes the PID_FILE
+ *
+ *    Notice: parent daemon process id is in the file but also child is
+ *    created which id is parent + 1
+ *    Also, ignore the PID_FILE write lock (otherwise this won't work)
+ */
+
+void stop_SysLogger(void)
+{
+  int fd = open(PID_FILE, O_RDWR);
+  if (fd == -1) {
+    printf("Error stopping the daemon, is it really running?\n");
+    exit(0);
+  }
+
+  /* Now read pid, pid max len 5 */
+  char pid_str[6] = "";
+  read(fd, &pid_str, 5);
+  close(fd);
+  long pid = strtol(pid_str, NULL, 10);
+
+  /* Send SIGTERMs */
+  kill(pid, SIGTERM);
+  kill(pid + 1, SIGTERM);
+
+  /* Remove PID_FILE */
+  remove(PID_FILE);
+
+  printf("SysLogger daemon stopped\n");
+  exit(0);
+
+}
 
 
 /*
  *    Opens SysLogger program pid file
- *    Tries to acquire write lock
- *    If can't acquire lock, returns 0 (SysLogger should exit)
+ *    Tries to acquire a write lock
+ *    If can't acquire the lock, returns 0 (SysLogger should exit)
  *    If locking is possible, writes pid to the file and returns 1
- *    If writing fails, smt severely wrong (SysLogger should exit), returns -1
+ *    If writing fails, smt went severely wrong (SysLogger should exit), returns -1
  *
  *    Lock is freed when the SysLogger program exits (must not be freed prior)
  */

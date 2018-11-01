@@ -30,11 +30,17 @@
 extern volatile sig_atomic_t terminated;
 
 /*    Macros    */
-/*  Path to the SysLogger pid file */
+
+/*  Path to the SysLogger pid file (would be better if it locates
+    in /var/run but then program should be run under root        */
 #define PID_FILE "/tmp/SysLogger.pid"
 
 /*    Function declarations  */
+
 /* In threading.c */
+
+void start_SysLogger(void);
+void stop_SysLogger(void);
 int write_pid_file(void);
 void main_thread(void);
 int create_thread(const char *pipe_name, pthread_t *threads);
@@ -43,7 +49,9 @@ void list_files(list_t *list);
 void cancel_all (list_t *list);
 void cancel_non_active (list_t *list);
 
+
 /* In signal_handler.c */
+
 void signal_handler(int sig);
 
 

@@ -19,7 +19,7 @@ EXE = logger_daemon test_logger thread_test list_test pipe_test
 default:	all
 
 all:	$(Files)
-	$(CC) $(CFLAGS) -static create_daemon.c -L. -l logger $(LPTH) -o logger_daemon
+	$(CC) $(CFLAGS) -static create_daemon.c -L. -l logger $(LPTH) -o SysLogger
 
 
 lib:	$(O_FILES) logger_header.h

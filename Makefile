@@ -9,11 +9,11 @@ CC = gcc
 CFLAGS = -Wall -pedantic
 DFLAGS = -Wall -pedantic -g
 Files = lib test_logger
-O_FILES = threading.o pipes.o list.o signal_handler.o
+O_FILES = threading.o pipes.o list.o signal_handler.o log.o
 STATIC_F = ar rcs
 LPTH = -lpthread
 DEBUG = list_debug pipe_debug thread_debug
-EXE = logger_daemon test_logger thread_test list_test pipe_test
+EXE = logger_daemon test_logger thread_test list_test pipe_test SysLogger
 
 
 default:	all
@@ -39,6 +39,9 @@ list.o:	list.h
 
 signal_handler.o: logger_header.h
 	$(CC) $(CFLAGS) -c signal_handler.c
+
+log.o: log.h
+	$(CC) $(CFLAGS) -c log.c
 
 clean:
 	$(RM) ${O_FILES} ${EXE} liblogger.a

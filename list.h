@@ -1,7 +1,7 @@
 /*
  *    Author: Lauri Westerholm
  *
- *    Header for a linked list (link.c)
+ *    Header for a linked list (list.c)
  */
 
 #ifndef LIST_HEADER

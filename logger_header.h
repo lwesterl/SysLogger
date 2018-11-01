@@ -7,27 +7,35 @@
 #define LOGGER_HEADER
 
 
-/*  C libraries */
+/*    C libraries   */
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pthread.h>
 #include <errno.h>
 #include <signal.h>
+#include <poll.h>
 #include "list.h"
 #include "pipes.h"
 
 
-/*  Global variables */
+/*    Global variables  */
 extern volatile sig_atomic_t terminated;
 
-/*  Function declarations */
+/*    Macros    */
+/*  Path to the SysLogger pid file */
+#define PID_FILE "/tmp/SysLogger.pid"
+
+/*    Function declarations  */
 /* In threading.c */
+int write_pid_file(void);
 void main_thread(void);
 int create_thread(const char *pipe_name, pthread_t *threads);
 void *blocker_thread(void *ptr);

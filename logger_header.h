@@ -24,6 +24,7 @@
 #include <poll.h>
 #include "list.h"
 #include "pipes.h"
+#include "log.h"
 
 
 /*    Global variables  */

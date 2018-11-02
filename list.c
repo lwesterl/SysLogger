@@ -155,7 +155,7 @@ void remove_all(list_t *list)
     list = temp_next;
   }
   /*  Now remove the final entry */
-  
+
   if (list->thread != NULL) {
     free(list->thread);
   }
@@ -207,9 +207,8 @@ list_t  *remove_non_active(list_t *list)
     }
     else {
       /*  Create a new plain base entry */
-      printf("hello removal \n");
+
       if (list->thread != NULL) {
-        printf("removal success \n");
         free(list->thread);
       }
       free(list);

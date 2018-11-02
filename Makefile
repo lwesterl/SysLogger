@@ -8,12 +8,13 @@
 CC = gcc
 CFLAGS = -Wall -pedantic
 DFLAGS = -Wall -pedantic -g
-Files = lib test_logger
+Files = lib
 O_FILES = threading.o pipes.o list.o signal_handler.o log.o
 STATIC_F = ar rcs
 LPTH = -lpthread
-DEBUG = list_debug pipe_debug thread_debug log_debug
-EXE = logger_daemon test_logger thread_test list_test pipe_test SysLogger log_test
+DEBUG = list_debug pipe_debug thread_debug log_debug test_logger
+EXE = test_logger thread_test list_test pipe_test SysLogger log_test
+DEXE = test_logger thread_test list_test pipe_test log_test
 
 
 default:	all
@@ -24,9 +25,6 @@ all:	$(Files)
 
 lib:	$(O_FILES) logger_header.h
 	$(STATIC_F) liblogger.a ${O_FILES}
-
-test_logger:	$(lib)
-	$(CC) $(CFLAGS) logger_test.c -L. -l logger $(LPTH) -o test_logger
 
 threading.o:	logger_header.h
 	$(CC) $(CFLAGS) $(LPTH) -c threading.c
@@ -43,16 +41,24 @@ signal_handler.o: logger_header.h
 log.o: log.h
 	$(CC) $(CFLAGS) -c log.c
 
+#		CLEAN
+
 clean:
 	$(RM) ${O_FILES} ${EXE} liblogger.a
 
 clean-objects:
 	$(RM) ${O_FILES}
 
+clean-debug:
+	$(RM) ${DEXE}
+
 
 #		DEBUG BUILDS
 
 debug: $(DEBUG)
+
+test_logger:	$(lib)
+	$(CC) $(CFLAGS) logger_test.c -L. -l logger $(LPTH) -o test_logger
 
 list_debug: list.h
 	$(CC) $(DFLAGS) list.c list_test.c -o list_test

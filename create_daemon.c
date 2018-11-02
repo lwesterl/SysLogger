@@ -53,10 +53,9 @@ int main(int args, char *argv[])
  *    The reforks and kills the middle parent switching the ownership of the final
  *    child process to the init process
  *    Changes working directory to root and redirects fd 0, 1, 2 to /dev/null
- *    <-> A daemon created
+ *    <-> A daemon created. Informs the first process that the daemon is running
  *
  *    Starts to execute the main SysLogger code:
- *      - Creates a child process to write log entries
  *      - Starts to manage syncronization and thread creation
  */
 
@@ -202,31 +201,14 @@ void start_SysLogger(void) {
 
       /*
        *    Now process is a daemon and it has been informed to user
-       *    Create a child process which starts handling log writing
-       *    Parent starts to handle thread syncronization and creation
+       *    Start to handle thread syncronization and creation by
+       *    calling main_thread
        */
 
+       pause();
+        //main_thread();
 
-       pid = fork();
-
-       if (pid == -1) {
-         /* Fork failed, exit. User could be notified */
-         exit(-1);
-       }
-       else if (pid > 0) {
-
-
-         /* Parent, start syncronization  */
-         pause();
-          //main_thread();
-       }
-       else {
-         /* child */
-         pause();
-       }
     }
-
-
   }
 
 }
@@ -234,10 +216,9 @@ void start_SysLogger(void) {
 /*
  *    Stop SysLogger daemon
  *    Get running daemon process id from PID_FILE
- *    Sends SIGTERM to the id  and id + 1 and removes the PID_FILE
+ *    Sends SIGTERM to the id and removes the PID_FILE
  *
- *    Notice: parent daemon process id is in the file but also child is
- *    created which id is parent + 1
+ *    Notice: parent daemon process id is in the file
  *    Also, ignore the PID_FILE write lock (otherwise this won't work)
  */
 
@@ -257,7 +238,6 @@ void stop_SysLogger(void)
 
   /* Send SIGTERMs */
   kill(pid, SIGTERM);
-  kill(pid + 1, SIGTERM);
 
   /* Remove PID_FILE */
   remove(PID_FILE);

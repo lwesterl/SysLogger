@@ -23,6 +23,12 @@ int syslogger(const char *message)
     /*  Concat proc_name and pid to the message */
     if (concat_message(msg, pid_str, proc_name, message)) {
       /* The message was succesfully created */
+
+      /* Create the fifo */
+      char *fifoname = syslogger_fifo(pid_str);
+      printf("%s\n", fifoname);
+      /* Open the fifo */
+      free(fifoname);
       free(proc_name);
       printf("%s\n", msg);
 

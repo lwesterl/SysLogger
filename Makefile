@@ -9,12 +9,12 @@ CC = gcc
 CFLAGS = -Wall -pedantic
 DFLAGS = -Wall -pedantic -g
 Files = lib
-O_FILES = threading.o pipes.o list.o signal_handler.o log.o
+O_FILES = threading.o pipes.o list.o signal_handler.o log.o syslogger.o
 STATIC_F = ar rcs
 LPTH = -lpthread
-DEBUG = list_debug pipe_debug thread_debug log_debug test_logger
-EXE = test_logger thread_test list_test pipe_test SysLogger log_test
-DEXE = test_logger thread_test list_test pipe_test log_test
+DEBUG = list_debug pipe_debug thread_debug log_debug test_logger syslog_debug
+EXE = test_logger thread_test list_test pipe_test SysLogger log_test syslog_test
+DEXE = test_logger thread_test list_test pipe_test log_test syslog_test
 
 
 default:	all
@@ -40,6 +40,9 @@ signal_handler.o: logger_header.h
 
 log.o: log.h
 	$(CC) $(CFLAGS) -c log.c
+
+syslogger.o: syslogger.h
+	$(CC) $(CFLAGS) -c syslogger.c
 
 #		CLEAN
 
@@ -71,6 +74,10 @@ thread_debug: logger_test.h
 
 log_debug: log.h
 	$(CC) $(DFLAGS) log_test.c log.c -o log_test
+
+syslog_debug: syslogger.h
+	$(CC) $(DFLAGS) syslogger.c pipes.c -o syslog_test
+
 
 test_memory:	thread_test
 	valgrind --leak-check=yes ./thread_test

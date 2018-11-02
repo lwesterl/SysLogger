@@ -42,6 +42,9 @@ void close_logs(int fd[2])
  *    Writes message (pointer as argument) to the standard log adding a timestamp
  *    Fds to the logs as array of two integers (fd[0] std log, fd[1] err log)
  *    If writing fails, writes entry to the error log
+ *
+ *    localtime is not thread-safe but calling this function at the first place
+ *    the calling thread has locked mutex
  */
 
 void write_log_message(const char *message, int fd[2])
@@ -61,7 +64,7 @@ void write_log_message(const char *message, int fd[2])
 
     /*  Try to write the message */
     if ( write(fd[0], content, len - 1) < (len - 1)) {
-    
+
       /*  Smt failed during writing */
       /*  Create an error message */
       char error_str[] = "Function [ write() ] error\n";
@@ -87,6 +90,9 @@ void write_log_message(const char *message, int fd[2])
  *    Gets an error message as the first argument
  *    Adds a timestamp to the message and writes it to the standard error
  *    log which it gets a file descriptor as the second argument
+ *
+ *    localtime is not thread-safe but calling this function at the first place
+ *    the calling thread has locked mutex
  */
 
 

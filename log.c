@@ -19,7 +19,7 @@
 int open_log(char *log_name)
 {
   /*  Create the log file if it doesn't exist */
-  int fd = open(log_name, O_APPEND | O_CREAT, S_IWUSR | S_IRUSR);
+  int fd = open(log_name, O_WRONLY | O_APPEND | O_CREAT, 0666);
   return fd;
 
 }
@@ -49,6 +49,7 @@ void write_log_message(const char *message, int fd[2])
   /* Get current time */
   time_t time_now = time(NULL);
   char *time_str = asctime(localtime(&time_now));
+  time_str[strlen(time_str) - 1] = ':'; /* Replace '\n' with ':' */
 
   /* Now concat the two buffers */
   int len = strlen(time_str) + strlen(message) + 1;
@@ -60,6 +61,7 @@ void write_log_message(const char *message, int fd[2])
 
     /*  Try to write the message */
     if ( write(fd[0], content, len - 1) < (len - 1)) {
+      perror("Err: ");
 
       /*  Smt failed during writing */
       /*  Create an error message */
@@ -79,4 +81,34 @@ void write_log_message(const char *message, int fd[2])
   }
 
 
+}
+
+
+/*
+ *    Gets an error message as the first argument
+ *    Adds a timestamp to the message and writes it to the standard error
+ *    log which it gets a file descriptor as the second argument
+ */
+
+
+void write_error_message(char *err_msg, int fd)
+{
+
+  /* Get current time */
+  time_t time_now = time(NULL);
+  char *time_str = asctime(localtime(&time_now));
+  time_str[strlen(time_str) - 1] = ':'; /* Replace '\n' with ':' */
+
+  int len = strlen(time_str) + strlen(err_msg) + 1;
+  char *message = malloc(len);
+
+  if (message != NULL) {
+    /* Concat the strings */
+    strncpy(message, time_str, strlen(time_str) + 1);
+    strncat(message, err_msg, strlen(err_msg));
+
+    /* Write the message */
+    write(fd, message, len - 1);
+    free(message);
+  }
 }

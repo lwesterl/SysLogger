@@ -20,7 +20,7 @@ DEXE = test_logger thread_test list_test pipe_test log_test
 default:	all
 
 all:	$(Files)
-	$(CC) $(CFLAGS) -static create_daemon.c -L. -l logger $(LPTH) -o SysLogger
+	$(CC) $(CFLAGS) -static create_daemon.c -L. -llogger $(LPTH) -o SysLogger
 
 
 lib:	$(O_FILES) logger_header.h
@@ -57,14 +57,14 @@ clean-debug:
 
 debug: $(DEBUG)
 
-test_logger:	$(lib)
-	$(CC) $(CFLAGS) logger_test.c -L. -l logger $(LPTH) -o test_logger
+test_logger: lib
+	$(CC) $(CFLAGS) logger_test.c -L. -llogger $(LPTH) -o test_logger
 
 list_debug: list.h
 	$(CC) $(DFLAGS) list.c list_test.c -o list_test
 
 pipe_debug:	pipes.h
-	$(CC) $(DFLAGS) pipes.c pipes_test.c threading.c signal_handler.c list.c $(LPTH) -o pipe_test
+	$(CC) $(DFLAGS) pipes.c pipes_test.c threading.c signal_handler.c list.c log.c $(LPTH) -o pipe_test
 
 thread_debug: logger_test.h
 	$(CC) $(DFLAGS) logger_test.c pipes.c list.c signal_handler.c log.c threading.c  $(LPTH) -o thread_test

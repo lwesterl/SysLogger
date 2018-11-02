@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/syscall.h> 
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
@@ -22,7 +23,7 @@
 #include "list.h"
 
 
-/*  MACROS  */
+/*    MACROS    */
 
 /*  Permissions which the pipes are created with  */
 #define PIPE_PERMISSIONS 0666
@@ -35,13 +36,15 @@
 #define FIFO_NAME_LEN 20
 
 
-/* Global variables */
+/*    Global variables  */
+
 extern volatile sig_atomic_t terminated;
 
-/*  Function declarations */
+/*    Function declarations   */
 
-void create_fifo(void);
 int open_fifo_read(char *fifoname);
+char *syslogger_fifo(char *pid_str);
+void create_fifo(void);
 void concat_path(char *dest, const char *source);
 
 

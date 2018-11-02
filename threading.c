@@ -5,8 +5,13 @@
 
  #include "logger_header.h"
 
-/* Global variable */
+
+/* Global variables */
+
 volatile sig_atomic_t terminated = 0;
+int logs_fd[2]; /* File descriptors to the log files */
+pthread_mutex_t write_mutex; /* A mutex used to control the log writing */
+
 
 
 /*
@@ -20,6 +25,18 @@ volatile sig_atomic_t terminated = 0;
 
 void main_thread(void)
 {
+  /* Open the logs, fd[0] == main log, fd[1] == error log */
+  logs_fd[0] = open_log(LOG_FILE_NAME);
+  logs_fd[1] = open_log(ERR_LOG_NAME);
+  if (logs_fd[0] == -1 || logs_fd[1] == -1) {
+    /* Error, remove the pid file and exit */
+    remove(PID_FILE);
+    exit(-1);
+  }
+
+  /* Init a mutex to synchronize log writing */
+  pthread_mutex_init(&write_mutex, NULL); /* Default mutex attributes */
+
   /* Connect a real basic signal handler */
   struct sigaction sig_action = {.sa_handler = signal_handler};
   sig_action.sa_flags = 0;
@@ -38,18 +55,8 @@ void main_thread(void)
   while(1)
   {
     if (terminated) {
-      /* Cancel all threads */
-
-      cancel_all(list);
-      printf("ALL canceled \n");
-
-      /* Free all the list entries */
-      /* sleep gives other threads time to exit cleanly before the structs are freed */
-      sleep(1);
-      remove_all(list_begin);
-
-      /* EXIT */
-      exit(0);
+      /* Make a clean exit */
+      make_clean_exit(list_begin, CLEAN_EXIT);
     }
 
     /* First clear all the status bytes from the list entries */
@@ -80,25 +87,19 @@ void main_thread(void)
 
 int create_thread(const char *pipe_name, pthread_t *threads)
 {
-
-  printf("creating thread\n");
-
   if (threads == NULL) {
     /*  Bad alloc, now program should exit gracefully  */
-    /* NOT IMPLEMENTED */
-    /*  IMPLEMENT: write exit reason to the debug log */
-
-    exit(-1);
+    return -1;
   }
   /* Create thread with detached attribute */
   pthread_attr_t attr;
   if (pthread_attr_init(&attr) != 0) {
     /* Error creating the thread */
-    /* IMPLEMENT TERMINATING OF PROGRAM */
+    return -1;
   }
   if ( pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
     /* Error creating the thread */
-    /* IMPLEMENT TERMINATING OF PROGRAM */
+    return -1;
   }
   /* Create a new thread */
   int ret = pthread_create( threads, &attr, blocker_thread, (void *) pipe_name);
@@ -122,15 +123,12 @@ void *blocker_thread(void *ptr)
 {
   /* Set cancel state to asynchronous */
   if (pthread_setcancelstate(PTHREAD_CANCEL_ASYNCHRONOUS, NULL) != 0) {
-    /* Error */
-    printf("Error in cancel state, thread exits \n");
+    /* Error, should NOT ever happen */
     pthread_exit(NULL);
   }
 
   /*  Acquire pipename from casting the input */
   char *pipename = (char *) ptr;
-  printf("hello, I am a new thread \n");
-  printf("Pipename: %s\n", pipename);
 
   /* Open fifo matching the pipename, blocks until the fifo is opened for write */
   int fd = open_fifo_read(pipename);
@@ -139,12 +137,19 @@ void *blocker_thread(void *ptr)
   if (fd < 0) {
     /* Opening failed */
     /* Write a log entry and exit thread */
-    perror("FIFO opening error:");
+    pthread_mutex_lock(&write_mutex);
+
+    char err_buff[100] = ""; /* This should be enough for the error string */
+    strerror_r(errno, err_buff, 100); /* Thread-safe */
+    write_error_message(err_buff, logs_fd[1]);
+    write_error_message(" Thread exits\n", logs_fd[1]);
+
+    pthread_mutex_unlock(&write_mutex);
     pthread_exit(NULL);
 
   }
 
-  size_t bytes_read = 0;
+  ssize_t bytes_read = 0;
   char content[MAX_BYTES] = "";
 
   /* Start to read the fifo in non-blocking mode until the fifo isn't empty
@@ -154,7 +159,7 @@ void *blocker_thread(void *ptr)
   while (1) {
     bytes_read = read(fd, &content, MAX_BYTES);
     if (bytes_read > 0) {
-      /* Successfullly read fifo content */
+      /* Successfully read fifo content */
       break;
     }
     else if (terminated) {
@@ -168,10 +173,12 @@ void *blocker_thread(void *ptr)
       pthread_exit(NULL);
     }
   }
-  /* Write an log entry */
-  printf("Content: %s\n", content);
 
-
+  /* Write an log entry, try to lock write_mutex (block until locking possible)*/
+  
+  pthread_mutex_lock(&write_mutex);
+  write_log_message(content, logs_fd);
+  pthread_mutex_unlock(&write_mutex);
 
   /* Exit without stopping other threads */
   close(fd);
@@ -225,14 +232,8 @@ void list_files(list_t *list)
             /*  Create a new thread which gets pipename as argument */
             if ( create_thread(pipename, new->thread) != 0 ) {
               /* Failed, now program should exit gracefully */
-              /* NOT IMPLEMENTED */
-              printf("FAILED !\n");
+              make_clean_exit(start, THREAD_CREATION_ERROR_EXIT);
             }
-            if (new-> thread == NULL) {
-              printf("Thread: NULL\n");
-            }
-
-            printf("A thread created \n");
 
           }
           list = start; /* Set list back to the start of the list */
@@ -263,7 +264,8 @@ void cancel_all (list_t *list)
       /* There is still a allocated pthread_t struct */
       if ( pthread_cancel((*(list->thread))) != 0) {
         /* Error is usually ::success meaning that the thread has already exited cleanly */
-        perror("Error in canceling threads: ");
+        /* These are not logged to the error log */
+        //perror("Error in canceling threads: ");
       }
     }
 
@@ -287,10 +289,50 @@ void cancel_non_active (list_t *list)
       /* Send cancel request */
       if ( pthread_cancel((*(list->thread))) != 0) {
         /* Error */
-        perror("Error canceling thread: ");
+        //perror("Error canceling thread: ");
       }
     }
     /* Move pointer */
     list = list->next;
   }
+}
+
+/*
+ *    Makes clean exit from SysLogger
+ *    Called from the main thread when the program is terminated
+ *    list_t list which contains the thread and pipe entries
+ *    exit_reason is a macro value (CLEAN_EXIT, THREAD_CREATION_ERROR_EXIT)
+ */
+
+void make_clean_exit(list_t *list, int exit_reason)
+ {
+  /* Cancel all threads */
+  list_t *list_begin = list; /* Store the first entry pointer */
+  cancel_all(list);
+
+  /* Free all the list entries */
+  /* sleep gives other threads time to exit cleanly before the structs are freed */
+  sleep(1);
+  remove_all(list_begin);
+
+  /* Destroy the mutex */
+  pthread_mutex_destroy(&write_mutex);
+
+  if (exit_reason == THREAD_CREATION_ERROR_EXIT) {
+    /* Write the exit reason to the error log */
+    write_error_message(" Thread creation error, forced exit\n", logs_fd[1]);
+  }
+
+  /* Write the final exit message to the log */
+  char exit_msg[] = " SysLogger daemon stopped\n";
+  write_log_message(exit_msg, logs_fd);
+
+  /* Close the log file descriptors */
+  close_logs(logs_fd);
+  /*  Remove the pid file, if program is terminated by SysLogger stop, the file
+      should be already removed                                               */
+  remove(PID_FILE);
+
+  /* EXIT */
+  exit(0);
 }

@@ -28,9 +28,16 @@
 
 
 /*    Global variables  */
+
+/*  Program has recieved a terminating signal */
 extern volatile sig_atomic_t terminated;
 
 /*    Macros    */
+
+/*  Exit reason macros for make_clean_exit */
+#define CLEAN_EXIT 0
+#define THREAD_CREATION_ERROR_EXIT 1
+
 
 /*  Path to the SysLogger pid file (would be better if it locates
     in /var/run but then program should be run under root        */
@@ -49,6 +56,7 @@ void *blocker_thread(void *ptr);
 void list_files(list_t *list);
 void cancel_all (list_t *list);
 void cancel_non_active (list_t *list);
+void make_clean_exit(list_t *list, int exit_reason);
 
 
 /* In signal_handler.c */

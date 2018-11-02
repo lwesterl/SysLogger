@@ -61,8 +61,7 @@ void write_log_message(const char *message, int fd[2])
 
     /*  Try to write the message */
     if ( write(fd[0], content, len - 1) < (len - 1)) {
-      perror("Err: ");
-
+    
       /*  Smt failed during writing */
       /*  Create an error message */
       char error_str[] = "Function [ write() ] error\n";

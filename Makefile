@@ -12,8 +12,8 @@ Files = lib test_logger
 O_FILES = threading.o pipes.o list.o signal_handler.o log.o
 STATIC_F = ar rcs
 LPTH = -lpthread
-DEBUG = list_debug pipe_debug thread_debug
-EXE = logger_daemon test_logger thread_test list_test pipe_test SysLogger
+DEBUG = list_debug pipe_debug thread_debug log_debug
+EXE = logger_daemon test_logger thread_test list_test pipe_test SysLogger log_test
 
 
 default:	all
@@ -50,7 +50,7 @@ clean-objects:
 	$(RM) ${O_FILES}
 
 
-#	DEBUG BUILDS
+#		DEBUG BUILDS
 
 debug: $(DEBUG)
 
@@ -61,7 +61,10 @@ pipe_debug:	pipes.h
 	$(CC) $(DFLAGS) pipes.c pipes_test.c threading.c signal_handler.c list.c $(LPTH) -o pipe_test
 
 thread_debug: logger_test.h
-	$(CC) $(DFLAGS) logger_test.c pipes.c list.c signal_handler.c threading.c  $(LPTH) -o thread_test
+	$(CC) $(DFLAGS) logger_test.c pipes.c list.c signal_handler.c log.c threading.c  $(LPTH) -o thread_test
+
+log_debug: log.h
+	$(CC) $(DFLAGS) log_test.c log.c -o log_test
 
 test_memory:	thread_test
 	valgrind --leak-check=yes ./thread_test

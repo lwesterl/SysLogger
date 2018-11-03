@@ -29,16 +29,15 @@ int syslogger(const char *message)
   parse_pid(pid_str);
   char *proc_name = get_prog_name(pid_str);
   if (proc_name != NULL) {
-    printf("%s\n", proc_name);
 
     /*  Concat proc_name and pid to the message */
     if (concat_message(msg, pid_str, proc_name, message)) {
       /* The message was succesfully created */
-      printf("%s\n", msg);
+      //printf("%s\n", msg);
 
       /* Create the fifo */
       char *fifoname = syslogger_fifo(pid_str);
-      printf("%s\n", fifoname);
+
       free(proc_name);
 
       /* Open the fifo, if it isn't opened for reading, errno should be ENXIO */
@@ -46,17 +45,23 @@ int syslogger(const char *message)
 
       struct timeval time_elapsed;
       gettimeofday(&time_elapsed, NULL);
-      time_t start_time = time_elapsed.tv_sec;
+      struct timeval start_time = time_elapsed;
 
-      /* Give one sec time for the reading thread to connect and then timeout */
+      /* Give 2 sec time for the reading thread to connect and then timeout */
       /* Break loop also if an unexpected error occurs */
       while (1)
       {
         if (fd > 0) break;
-        else if (fd < 0 && errno != ENXIO) break;
-        else if (time_elapsed.tv_sec > start_time) break;
+        else if (fd < 0 && errno != ENXIO) {
+          break;
+        }
+        else if ((time_elapsed.tv_sec > start_time.tv_sec + 1) &&
+        (time_elapsed.tv_usec > start_time.tv_usec)) {
+          /* Also usec checked to keep the timeout exactly at 2 sec */
+          break;
+        }
         fd = open(fifoname, O_WRONLY | O_NONBLOCK);
-        /* Update time also */
+        /* Also, update time elapsed */
         gettimeofday(&time_elapsed, NULL);
       }
       free(fifoname);
@@ -189,12 +194,4 @@ int concat_message(char *dest, const char *pid_str, const char *name, const char
   }
   return 0;
 
-}
-
-// THIS WILL BE REMOVED
-int main(void)
-{
-  int ret = syslogger("hello world, some test message\n");
-  printf("Return value: %d\n", ret);
-  return 0;
 }

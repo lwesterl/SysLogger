@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/syscall.h> 
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
@@ -32,8 +32,8 @@
 #define FIFO_WRITE 2
 /* Max amount of bytes that can be written/read from fifo */
 #define MAX_BYTES 200
-/* Fifo name length ( /tmp/sysloggerxxxxx0, 0 == '\0' ) */
-#define FIFO_NAME_LEN 20
+/* Fifo name max length ( /tmp/sysloggerxxxxxnxxxxx0, 0 == '\0' ) */
+#define FIFO_NAME_LEN 26
 
 
 /*    Global variables  */
@@ -44,8 +44,11 @@ extern volatile sig_atomic_t terminated;
 
 int open_fifo_read(char *fifoname);
 char *syslogger_fifo(char *pid_str);
-void create_fifo(void);
+void remove_fifo(char *fifoname);
 void concat_path(char *dest, const char *source);
+/* Old implementations, not used */
+void create_fifo(void);
+
 
 
 

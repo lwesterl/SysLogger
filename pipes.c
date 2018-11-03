@@ -65,6 +65,37 @@ int open_fifo_read(char *fifoname)
 
  }
 
+/*
+ *    Removes a fifo pipe
+ *    fifoname is a dynamically allocated string which is freed after removing
+ *    the fifo
+ *
+ *    This function should be called from blocker_thread before exiting
+ */
+
+void remove_fifo(char *fifoname)
+{
+  remove(fifoname);
+  free(fifoname);
+}
+
+
+
+/*
+ *    Concats input string (sysloggerxxxxxnxxxxx) and path (/tmp/)
+ *    Two arguments: dest buffer, source buffer
+ *    source buffer should contain sysloggerxxxxxnxxxxx string (strlen <= 20)
+ *    dest buffer should have space for FIFO_NAME_LEN chars (and be empty)
+ */
+void concat_path(char *dest, const char *source)
+{
+  strncpy(dest, "/tmp/", 6); /* Copy also terminator */
+  /* Starts from the terminator and adds strlen(source) chars + '/0'  */
+  strncat(dest, source, strlen(source));
+}
+
+
+
 
 /*    OLD IMPLEMENTATIONS   */
 
@@ -93,18 +124,4 @@ int open_fifo_read(char *fifoname)
    /*  Create the fifo */
    mkfifo(fifoname, PIPE_PERMISSIONS);
 
- }
-
-
- /*
-  *    Concats input string (sysloggerxxxxx) and path (/tmp/)
-  *    Two arguments: dest buffer, source buffer
-  *    source buffer should contain sysloggerxxxxx string (strlen )
-  *    dest buffer should have space for FIFO_NAME_LEN chars (and be empty)
-  */
- void concat_path(char *dest, const char *source)
- {
-   strncpy(dest, "/tmp/", 6); /* Copy also terminator */
-   /* Starts from the terminator and adds 14 chars + '/0'  */
-   strncat(dest, source, 14);
  }

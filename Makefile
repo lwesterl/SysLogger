@@ -8,13 +8,13 @@
 CC = gcc
 CFLAGS = -Wall -pedantic
 DFLAGS = -Wall -pedantic -g
-Files = lib
+Files = lib stress_tester
 O_FILES = threading.o pipes.o list.o signal_handler.o log.o syslogger.o
 STATIC_F = ar rcs
 LPTH = -lpthread
-DEBUG = list_debug pipe_debug thread_debug log_debug test_logger syslog_debug
-EXE = test_logger thread_test list_test pipe_test SysLogger log_test syslog_test
-DEXE = test_logger thread_test list_test pipe_test log_test syslog_test
+DEBUG = list_debug pipe_debug thread_debug log_debug test_logger
+EXE = test_logger thread_test list_test pipe_test SysLogger log_test Stress_tester
+DEXE = test_logger thread_test list_test pipe_test log_test
 
 
 default:	all
@@ -22,9 +22,11 @@ default:	all
 all:	$(Files)
 	$(CC) $(CFLAGS) -static create_daemon.c -L. -llogger $(LPTH) -o SysLogger
 
-
 lib:	$(O_FILES) logger_header.h
 	$(STATIC_F) liblogger.a ${O_FILES}
+
+stress_tester: $(lib) stress_test.h
+	$(CC) $(CFLAGS) -static stress_test.c -L. -llogger $(LPTH) -o Stress_tester
 
 threading.o:	logger_header.h
 	$(CC) $(CFLAGS) $(LPTH) -c threading.c
@@ -74,9 +76,6 @@ thread_debug: logger_test.h
 
 log_debug: log.h
 	$(CC) $(DFLAGS) log_test.c log.c -o log_test
-
-syslog_debug: syslogger.h
-	$(CC) $(DFLAGS) syslogger.c pipes.c -o syslog_test
 
 
 test_memory:	thread_test

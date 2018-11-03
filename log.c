@@ -52,7 +52,7 @@ void write_log_message(const char *message, int fd[2])
   /* Get current time */
   time_t time_now = time(NULL);
   char *time_str = asctime(localtime(&time_now));
-  time_str[strlen(time_str) - 1] = ':'; /* Replace '\n' with ':' */
+  time_str[strlen(time_str) - 1] = ' '; /* Replace '\n' with ' ' */
 
   /* Now concat the two buffers */
   int len = strlen(time_str) + strlen(message) + 1;

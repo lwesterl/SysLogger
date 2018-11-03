@@ -205,8 +205,7 @@ void start_SysLogger(void) {
        *    calling main_thread
        */
 
-       pause();
-        //main_thread();
+       main_thread();
 
     }
   }

@@ -33,6 +33,8 @@ void main_thread(void)
     remove(PID_FILE);
     exit(-1);
   }
+  /* Write a log entry that SysLogger was started */
+  write_log_message(" SysLogger daemon started\n", logs_fd);
 
   /* Init a mutex to synchronize log writing */
   pthread_mutex_init(&write_mutex, NULL); /* Default mutex attributes */
@@ -124,6 +126,7 @@ void *blocker_thread(void *ptr)
   /* Set cancel state to asynchronous */
   if (pthread_setcancelstate(PTHREAD_CANCEL_ASYNCHRONOUS, NULL) != 0) {
     /* Error, should NOT ever happen */
+    free (ptr);
     pthread_exit(NULL);
   }
 
@@ -132,7 +135,6 @@ void *blocker_thread(void *ptr)
 
   /* Open fifo matching the pipename, blocks until the fifo is opened for write */
   int fd = open_fifo_read(pipename);
-  free(pipename); /* Free the heap buffer */
 
   if (fd < 0) {
     /* Opening failed */
@@ -141,10 +143,16 @@ void *blocker_thread(void *ptr)
 
     char err_buff[100] = ""; /* This should be enough for the error string */
     strerror_r(errno, err_buff, 100); /* Thread-safe */
+    /* Add a line feed to the error buffer */
+    int len = strlen(err_buff);
+    err_buff[len] = '\n';
+    err_buff[len + 1] = '\0';
     write_error_message(err_buff, logs_fd[1]);
-    write_error_message(" Thread exits\n", logs_fd[1]);
+    write_error_message("Thread exits\n", logs_fd[1]);
 
     pthread_mutex_unlock(&write_mutex);
+    /* Remove the fifo and free the memory allocated for pipename */
+    remove_fifo(pipename);
     pthread_exit(NULL);
 
   }
@@ -165,23 +173,30 @@ void *blocker_thread(void *ptr)
     else if (terminated) {
       /* Program terminated, exit */
       close(fd);
+      /* Remove the fifo and free the memory allocated for pipename */
+      remove_fifo(pipename);
       pthread_exit(NULL);
     }
     else if (errno != EAGAIN && bytes_read < 0) {
       /* Some fatal error exit, shouldn't happen */
       close(fd);
+      /* Remove the fifo and free the memory allocated for pipename */
+      remove_fifo(pipename);
       pthread_exit(NULL);
     }
   }
 
   /* Write an log entry, try to lock write_mutex (block until locking possible)*/
-  
+
   pthread_mutex_lock(&write_mutex);
   write_log_message(content, logs_fd);
   pthread_mutex_unlock(&write_mutex);
 
   /* Exit without stopping other threads */
   close(fd);
+  /* Remove the fifo and free the memory allocated for pipename */
+  remove_fifo(pipename);
+
   pthread_exit(NULL);
 }
 

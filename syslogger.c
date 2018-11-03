@@ -8,7 +8,18 @@
 
 
 
-
+/*
+ *    Public interface to the syslogger program
+ *    This is the function which is called and linked to an arbitrary program
+ *    to make entries to the log
+ *
+ *    Gets the log message as an argument
+ *    Construct a new fifo matching the calling thread
+ *    Adds the caller pid and name to the message and tries to send it to the
+ *    running SysLogger daemon
+ *    If the message is succesfully written, returns 1
+ *    If smt fails, returns 0
+ */
 
 int syslogger(const char *message)
 {
@@ -23,25 +34,43 @@ int syslogger(const char *message)
     /*  Concat proc_name and pid to the message */
     if (concat_message(msg, pid_str, proc_name, message)) {
       /* The message was succesfully created */
+      printf("%s\n", msg);
 
       /* Create the fifo */
       char *fifoname = syslogger_fifo(pid_str);
       printf("%s\n", fifoname);
-      /* Open the fifo */
-      free(fifoname);
       free(proc_name);
-      printf("%s\n", msg);
 
-      /* Write message to the fifo */
-      return 1;
+      /* Open the fifo, if it isn't opened for reading, errno should be ENXIO */
+      int fd = open(fifoname, O_WRONLY | O_NONBLOCK);
+
+      struct timeval time_elapsed;
+      gettimeofday(&time_elapsed, NULL);
+      time_t start_time = time_elapsed.tv_sec;
+
+      /* Give one sec time for the reading thread to connect and then timeout */
+      /* Break loop also if an unexpected error occurs */
+      while (1)
+      {
+        if (fd > 0) break;
+        else if (fd < 0 && errno != ENXIO) break;
+        else if (time_elapsed.tv_sec > start_time) break;
+        fd = open(fifoname, O_WRONLY | O_NONBLOCK);
+        /* Update time also */
+        gettimeofday(&time_elapsed, NULL);
+      }
+      free(fifoname);
+
+      if (fd > 0) {
+        /* The fifo was succesfully opened, write the message and return */
+        write(fd, msg, strlen(msg));
+        return 1;
+      }
     }
-
-
 
   }
 
   return 0;
-
 }
 
 /*
@@ -94,7 +123,7 @@ void parse_pid(char *pid_str)
 /*
  *    Parses program name from input string
  *    The input string should be first line from /proc/pid/status
- *    Returns pointer to the name string (name contains one tab in front of it)
+ *    Returns pointer to the name string (name contains one space in front of it)
  */
 
 char *parse_proc_name(const char *line)
@@ -118,7 +147,8 @@ char *parse_proc_name(const char *line)
     }
   }
   /* Add a null terminator and return the name */
-
+  /* Replace the front tab with a space */
+  name[0] = ' ';
   name[j] = '\0';
   return name;
 }
@@ -164,6 +194,7 @@ int concat_message(char *dest, const char *pid_str, const char *name, const char
 // THIS WILL BE REMOVED
 int main(void)
 {
-  syslogger("hello world, some test message");
+  int ret = syslogger("hello world, some test message\n");
+  printf("Return value: %d\n", ret);
   return 0;
 }

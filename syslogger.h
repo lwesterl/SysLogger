@@ -16,7 +16,9 @@
 #include <string.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include "pipes.h" /* MAX_BYTES macro defined there */
+
 
 /*    Functions   */
 

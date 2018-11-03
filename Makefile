@@ -12,10 +12,10 @@ Files = lib stress_tester
 O_FILES = threading.o pipes.o list.o signal_handler.o log.o syslogger.o
 STATIC_F = ar rcs
 LPTH = -lpthread
-DEBUG = list_debug pipe_debug thread_debug log_debug test_logger
-EXE = test_logger thread_test list_test pipe_test SysLogger log_test Stress_tester
-DEXE = test_logger thread_test list_test pipe_test log_test
-
+DEBUG = list_debug pipe_debug thread_debug log_debug test_logger stress_debug
+EXE = test_logger thread_test list_test pipe_test SysLogger log_test Stress_tester stress_debug
+DEXE = test_logger thread_test list_test pipe_test log_test stress_debug
+VALG = valgrind --leak-check=yes
 
 default:	all
 
@@ -77,6 +77,12 @@ thread_debug: logger_test.h
 log_debug: log.h
 	$(CC) $(DFLAGS) log_test.c log.c -o log_test
 
+stress_debug: stress_test.h
+	$(CC) $(DFLAGS) stress_test.c syslogger.c pipes.c  $(LPTH) -o stress_debug
+
 
 test_memory:	thread_test
-	valgrind --leak-check=yes ./thread_test
+	$(VALG) ./thread_test
+
+test_stress_test: stress_debug
+	$(VALG) ./stress_debug

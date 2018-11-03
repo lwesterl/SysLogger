@@ -50,7 +50,7 @@
 
 
 /*
- *    Creates THREADS_TARGER amount of new threads
+ *    Creates THREADS_TARGET amount of new threads
  *    The threads execute thread_function
  *    The threads are created with detached state so that their resources are
  *    automatically collected at exit
@@ -63,66 +63,57 @@
  void child_process(int count)
  {
    int ret;
-   //printf("Hello\n");
-   for (int i = 0; i < THREADS_TARGER; i ++)
-   {
-     /* Create THREADS_TARGER amount of detached threads */
+   /* Allocate space for THREADS_TARGET pthread structs */
+   pthread_t *threads = malloc(THREADS_TARGET * sizeof(pthread_t));
+   if (threads != NULL) {
 
-     pthread_t thread;
-     /* Create thread with detached attribute */
-     pthread_attr_t attr;
-     if (pthread_attr_init(&attr) != 0) {
-       /* Error creating the thread */
-       exit(-1);
-     }
-     if ( pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
-       /* Error creating the thread */
-       exit(-1);
-     }
-     /* Create a thread number buffer from the current i value, i max 99 */
-     char thread_number[3] = "";
-     snprintf(thread_number, 3, "%d", i);
-     /* Create a process number buffer from count, count max 99 */
-     char process_number[3] = "";
-     snprintf(process_number, 3, "%d", count);
+     for (int i = 0; i < THREADS_TARGET; i ++)
+     {
+       /* Create a thread number buffer from the current i value, i max 99 */
+       char thread_number[3] = "";
+       snprintf(thread_number, 3, "%d", i);
+       /* Create a process number buffer from count, count max 99 */
+       char process_number[3] = "";
+       snprintf(process_number, 3, "%d", count);
 
-     //printf("Hello 222 \n");
-     /* Concat the buffers to base strings */
-     char base_str[] = " Stress tester process number, ";
-     char base_str2[] = ", thread number, ";
-     int len = strlen(base_str) + strlen(process_number) + strlen(base_str2)
-                + strlen(thread_number) + 2; /* Line feed + terminator */
-     char *message = malloc(len * sizeof(char));
+       /* Concat the buffers to base strings */
+       char base_str[] = " Stress tester process number, ";
+       char base_str2[] = ", thread number, ";
+       int len = strlen(base_str) + strlen(process_number) + strlen(base_str2)
+                  + strlen(thread_number) + 2; /* Line feed + terminator */
+       char *message = malloc(len * sizeof(char));
 
-     if (message != NULL) {
+       if (message != NULL) {
 
-       strncpy(message, base_str, strlen(base_str) + 1);
-       strncat(message, process_number, strlen(process_number));
-       strncat(message, base_str2, strlen(base_str2));
-       strncat(message, thread_number, strlen(thread_number));
-       int index = strlen(message);
-       message[index] = '\n'; /* Add a line feed */
-       message[index + 1] = '\0';
+         strncpy(message, base_str, strlen(base_str) + 1);
+         strncat(message, process_number, strlen(process_number));
+         strncat(message, base_str2, strlen(base_str2));
+         strncat(message, thread_number, strlen(thread_number));
+         int index = strlen(message);
+         message[index] = '\n'; /* Add a line feed */
+         message[index + 1] = '\0';
 
-       /* Create the thread */
-       //printf("Thread creation: %s\n", message);
-       /*if (syslogger(message) == 0) {
-         smt failed in syslog
-         printf("SysLogger failed \n");
-       }*/
-       ret = pthread_create(&thread, &attr, thread_function, (void *) message);
-       pthread_attr_destroy(&attr);
-       if (ret != 0) {
-          //smt went wrong, exit
-         perror("Thread creation error:");
-         exit(-1);
+         ret = pthread_create(&threads[i], NULL, thread_function, (void *) message);
+
+         if (ret != 0) {
+            /* smt went wrong */
+           perror("Thread creation error:");
+
+         }
+
        }
 
      }
-     //exit(0);
+     /* Wait for the threads to finish */
+     for (int i = 0; i < THREADS_TARGET; i++)
+     {
+        pthread_join(threads[i], NULL);
+     }
+     /* Free the memory allocated for the structs */
+     free(threads);
+
    }
-   /* All threads succesfully created, exit */
-   pause();
+
    exit(0);
  }
 
@@ -137,7 +128,6 @@
 
    /* Do type cast to a string */
    char *message = (char *) buffer;
-   //printf("%s\n", message);
 
    /* Call syslogger */
    if (syslogger(message) == 0) {

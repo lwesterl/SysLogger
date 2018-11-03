@@ -24,7 +24,7 @@
 /*  How many forks should be done, max 1 - 99 */
 #define FORKS_TARGET 10
 /* How many threads each fork should start, 1 - 99 */
-#define THREADS_TARGER 10
+#define THREADS_TARGET 50
 
 /*    Function declarations   */
 

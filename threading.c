@@ -78,6 +78,7 @@ void main_thread(void)
     list_begin = remove_non_active(list_begin);
     list = list_begin; /* Reset pointer to the start of the list */
 
+    usleep(5000); /* Sleep 5 ms, otherwise cpu usage 100 % */
   }
 
 }
@@ -133,7 +134,7 @@ void *blocker_thread(void *ptr)
   /*  Acquire pipename from casting the input */
   char *pipename = (char *) ptr;
 
-  /* Open fifo matching the pipename, blocks until the fifo is opened for write */
+  /* Open fifo matching the pipename, opens in non-blocking mode */
   int fd = open_fifo_read(pipename);
 
   if (fd < 0) {
@@ -161,8 +162,13 @@ void *blocker_thread(void *ptr)
   char content[MAX_BYTES] = "";
 
   /* Start to read the fifo in non-blocking mode until the fifo isn't empty
-     If fifo is empty 0 bytes are returned. If fifo is deleted the thread will
-     get stuck, only terminating whole program will cause the thread to exit */
+     If fifo is empty 0 bytes are returned. Timeout after 2 seconds
+     and remove the fifo, to avoid freezing the thread                    */
+
+  struct timeval start_time;
+  gettimeofday(&start_time, NULL);
+  struct timeval elapsed_time = start_time;
+
 
   while (1) {
     bytes_read = read(fd, &content, MAX_BYTES);
@@ -184,6 +190,17 @@ void *blocker_thread(void *ptr)
       remove_fifo(pipename);
       pthread_exit(NULL);
     }
+    else if ((elapsed_time.tv_sec > start_time.tv_sec + 1) &&
+            (elapsed_time.tv_usec > start_time.tv_usec)) {
+      /* usecs need to be checked also to keep the timeout exactly at 2 sec */
+      close(fd);
+      /* Remove the fifo and free the memory allocated for pipename */
+      remove_fifo(pipename);
+      pthread_exit(NULL);
+    }
+    /* Update elapsed_time */
+    gettimeofday(&elapsed_time, NULL);
+
   }
 
   /* Write an log entry, try to lock write_mutex (block until locking possible)*/

@@ -88,10 +88,14 @@ void main_thread(void)
  *    Return 1 if was successful, 0 if failed
  */
 
-int create_thread(const char *pipe_name, pthread_t *threads)
+int create_thread(char *pipe_name, pthread_t *threads)
 {
   if (threads == NULL) {
     /*  Bad alloc, now program should exit gracefully  */
+    /* Possibly free the buffer */
+    if (pipe_name != NULL) {
+      free(pipe_name);
+    }
     return -1;
   }
   /* Create thread with detached attribute */
@@ -105,6 +109,11 @@ int create_thread(const char *pipe_name, pthread_t *threads)
     return -1;
   }
   /* Create a new thread */
+  if (terminated) {
+    free(pipe_name);
+    free(threads);
+    return -1;
+  }
   int ret = pthread_create( threads, &attr, blocker_thread, (void *) pipe_name);
   pthread_attr_destroy(&attr);
   return ret;
@@ -125,6 +134,8 @@ int create_thread(const char *pipe_name, pthread_t *threads)
 void *blocker_thread(void *ptr)
 {
   /* Set cancel state to asynchronous */
+  /* However, threads should be always let to itself cancel otherwise race
+    conditions may occur */
   if (pthread_setcancelstate(PTHREAD_CANCEL_ASYNCHRONOUS, NULL) != 0) {
     /* Error, should NOT ever happen */
     free (ptr);
@@ -251,7 +262,7 @@ void list_files(list_t *list)
           //printf("%s\n", dir_object->d_name);
           /* Check if the list contains the fifo */
 
-          if (is_entry(list, dir_object->d_name) == 0) {
+          if (is_entry(list, dir_object->d_name) == 0 && !terminated ) {
 
             /*  Add a new entry and reset list pointer */
             list = start;
@@ -286,6 +297,7 @@ void list_files(list_t *list)
  *
  *    This functions is intended to force threads to exit if the haven't done it
  *    itself
+ *    It's prone to cause race conditions which result to a segmentation violation
  */
 
 void cancel_all (list_t *list)
@@ -318,7 +330,8 @@ void cancel_non_active (list_t *list)
   {
     if ((list->status == 0) && (list->thread != NULL))
     {
-      /* Send cancel request */
+      /* Send a cancel request, this should have no effect because threads has
+      already canceled itself */
       if ( pthread_cancel((*(list->thread))) != 0) {
         /* Error */
         //perror("Error canceling thread: ");
@@ -338,13 +351,13 @@ void cancel_non_active (list_t *list)
 
 void make_clean_exit(list_t *list, int exit_reason)
  {
-  /* Cancel all threads */
+  /* Give time to all threads to cancel and then remove the list entries */
   list_t *list_begin = list; /* Store the first entry pointer */
-  cancel_all(list);
+
 
   /* Free all the list entries */
   /* sleep gives other threads time to exit cleanly before the structs are freed */
-  sleep(1);
+  sleep(2);
   remove_all(list_begin);
 
   /* Destroy the mutex */

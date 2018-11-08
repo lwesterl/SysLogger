@@ -51,7 +51,7 @@ void start_SysLogger(void);
 void stop_SysLogger(void);
 int write_pid_file(void);
 void main_thread(void);
-int create_thread(const char *pipe_name, pthread_t *threads);
+int create_thread(char *pipe_name, pthread_t *threads);
 void *blocker_thread(void *ptr);
 void list_files(list_t *list);
 void cancel_all (list_t *list);

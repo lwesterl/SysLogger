@@ -85,4 +85,4 @@ test_memory:	thread_test
 	$(VALG) ./thread_test
 
 test_stress_test: stress_debug
-	$(VALG) ./stress_debug
+	$(VALG) ./stress_debug mem_test

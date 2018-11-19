@@ -21,7 +21,10 @@ list_t *List(void)
   new_list->prev = NULL;
   new_list->next = NULL;
   new_list->status = 1;
-  new_list->fifoname[0] = 0; /* Init to empty */
+  for (int i = 0; i < 21; i++)
+  {
+    new_list->fifoname[i] = '\0'; /* Init to empty */
+  }
   new_list->thread = NULL;
   return new_list;
 }
@@ -37,8 +40,8 @@ list_t *List(void)
 list_t *add_entry(list_t *list_first, const char fname[])
 {
   /*  Check if this is the first list item created which hasn't got a fifoname */
-  if (list_first->fifoname[0] == 0) {
-    strncpy(list_first->fifoname, fname, 20);
+  if (list_first->fifoname[0] == '\0') {
+    strncpy(list_first->fifoname, fname, 21);
     list_first->status = 1; /* Set status */
     list_first->thread = malloc(sizeof(pthread_t));
     return list_first;
@@ -175,7 +178,7 @@ int is_entry(list_t *list, const char fname[])
   /*  Iterate over all the list entries */
   while (list != NULL)
   {
-    if (strcmp(list->fifoname, fname) == 0) {
+    if (strncmp(list->fifoname, fname, strlen(fname)) == 0) {
       /*  Found a matching name */
       list->status = 1;
       return 1;

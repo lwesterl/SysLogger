@@ -1,6 +1,7 @@
 /*
  *    Author: Lauri Westerholm
  *    Contains thread related functions
+ *    Matching header: logger_header.h
  */
 
  #include "logger_header.h"
@@ -21,7 +22,7 @@ sigset_t block_set; /* Signal set used in blocker threads */
  *
  *    This thread creates other threads based on public pipes opened to
  *    temp-folder. The content of the new pipes, which are named as standard
- *    name + pid, should be written to the log
+ *    name + pid + tid, should be written to the log
  *    This thread starts a new thread for every new pipe
  */
 
@@ -36,7 +37,7 @@ void main_thread(void)
     exit(-1);
   }
   /* Write a log entry that SysLogger was started */
-  write_log_message(" SysLogger daemon started\n", logs_fd);
+  write_log_message(" SysLogger daemon started", logs_fd);
 
   /* Init a mutex to synchronize log writing */
   pthread_mutex_init(&write_mutex, NULL); /* Default mutex attributes */
@@ -94,6 +95,7 @@ void main_thread(void)
 /*
  *    Create a posix thread, pthread
  *    Return 1 if was successful, 0 if failed
+ *    Threads are created in detached mode
  */
 
 int create_thread(char *pipe_name, pthread_t *threads)
@@ -132,11 +134,9 @@ int create_thread(char *pipe_name, pthread_t *threads)
  *
  *    File descriptor to a pipe is given to a thread as input
  *    The thread opens the read end of the pipe
- *    Thread blocks until it can read message from the pipe
+ *    Thread blocks until it can read message from the pipe or timeout is reached
  *    Then the thread waits for to unlock mutex to write content to the log
- *    Finally the thread messages that it can be detached
- *    The previous is done by acquiring a write lock to a special pipe
- *    (the pipe which the main thread constantly reads in non-blocking mode)
+ *    Finally the thread exits and frees its resources (created as detached)
  */
 
 void *blocker_thread(void *ptr)
@@ -146,15 +146,6 @@ void *blocker_thread(void *ptr)
   {
     /* Error, which shouldn't happen */
     free(ptr);
-    pthread_exit(NULL);
-  }
-
-  /* Set cancel state to asynchronous */
-  /* However, threads should be always let to itself cancel otherwise race
-    conditions may occur */
-  if (pthread_setcancelstate(PTHREAD_CANCEL_ASYNCHRONOUS, NULL) != 0) {
-    /* Error, should NOT ever happen */
-    free (ptr);
     pthread_exit(NULL);
   }
 
@@ -198,7 +189,7 @@ void *blocker_thread(void *ptr)
 
 
   while (1) {
-    bytes_read = read(fd, &content, MAX_BYTES);
+    bytes_read = read(fd, &content, MAX_BYTES - 1);
     if (bytes_read > 0) {
       /* Successfully read fifo content */
       break;
@@ -275,7 +266,7 @@ void list_files(list_t *list)
         if (strstr(dir_object->d_name, "syslogger")) {
 
           /* Pipe is created by the program */
-          //printf("%s\n", dir_object->d_name);
+
           /* Check if the list contains the fifo */
 
           if (is_entry(list, dir_object->d_name) == 0 && !terminated ) {
@@ -307,58 +298,6 @@ void list_files(list_t *list)
 
 
 /*
- *    Cancels all threads apart from the main thread
- *    Goes through the list and calls pthread_cancel
- *    Gets list_t pointer list as argument
- *
- *    This functions is intended to force threads to exit if the haven't done it
- *    itself
- *    It's prone to cause race conditions which result to a segmentation violation
- */
-
-void cancel_all (list_t *list)
-{
-  while (list != NULL)
-  {
-    if (list->thread != NULL) {
-      /* There is still a allocated pthread_t struct */
-      if ( pthread_cancel((*(list->thread))) != 0) {
-        /* Error is usually ::success meaning that the thread has already exited cleanly */
-        /* These are not logged to the error log */
-        //perror("Error in canceling threads: ");
-      }
-    }
-
-    /*  Move the pointer to the next entry */
-    list = list->next;
-  }
-}
-
-
-/*
- *    Cancels all threads which are non-active
- *    Get list_t list pointer as argument
- */
-
-void cancel_non_active (list_t *list)
-{
-  while(list != NULL)
-  {
-    if ((list->status == 0) && (list->thread != NULL))
-    {
-      /* Send a cancel request, this should have no effect because threads has
-      already canceled itself */
-      if ( pthread_cancel((*(list->thread))) != 0) {
-        /* Error */
-        //perror("Error canceling thread: ");
-      }
-    }
-    /* Move pointer */
-    list = list->next;
-  }
-}
-
-/*
  *    Makes clean exit from SysLogger
  *    Called from the main thread when the program is terminated
  *    list_t list which contains the thread and pipe entries
@@ -387,7 +326,7 @@ void make_clean_exit(list_t *list, int exit_reason)
   }
 
   /* Write the final exit message to the log */
-  char exit_msg[] = " SysLogger daemon stopped\n";
+  char exit_msg[] = " SysLogger daemon stopped";
   write_log_message(exit_msg, logs_fd);
 
   /* Close the log file descriptors */
@@ -398,4 +337,62 @@ void make_clean_exit(list_t *list, int exit_reason)
 
   /* EXIT */
   exit(0);
+}
+
+
+/*  Not used implementations */
+
+/*
+ *    Cancels all threads apart from the main thread
+ *    Goes through the list and calls pthread_cancel
+ *    Gets list_t pointer list as argument
+ *
+ *    This functions is intended to force threads to exit if the haven't done it
+ *    itself
+ *
+ *    It's prone to cause race conditions which result to a segmentation violation
+ *    Thus, it is not used
+ */
+
+void cancel_all (list_t *list)
+{
+  while (list != NULL)
+  {
+    if (list->thread != NULL) {
+      /* There is still a allocated pthread_t struct */
+      if ( pthread_cancel((*(list->thread))) != 0) {
+        /* Error is usually ::success meaning that the thread has already exited cleanly */
+        /* These are not logged to the error log */
+        //perror("Error in canceling threads: ");
+      }
+    }
+
+    /*  Move the pointer to the next entry */
+    list = list->next;
+  }
+}
+
+
+/*
+ *    Cancels all threads which are non-active
+ *    Get list_t list pointer as argument
+ *    This suffers from same problems as cancel_all
+ */
+
+void cancel_non_active (list_t *list)
+{
+  while(list != NULL)
+  {
+    if ((list->status == 0) && (list->thread != NULL))
+    {
+      /* Send a cancel request, this should have no effect because threads has
+      already canceled itself */
+      if ( pthread_cancel((*(list->thread))) != 0) {
+        /* Error */
+        //perror("Error canceling thread: ");
+      }
+    }
+    /* Move pointer */
+    list = list->next;
+  }
 }

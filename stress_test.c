@@ -35,7 +35,7 @@
    }
    else {
      /* Check the pid file exists, pid file location is defined in logger_header.h
-        but including the whole header seems a bit excessive                    */
+        but including the whole header seems a bit excessive  */
 
      int fd = open("/tmp/SysLogger.pid", O_RDONLY);
      if (fd < 0) {
@@ -56,7 +56,7 @@
    }
 
    pid_t pid;
-   
+
    for (int i = 0; i < FORKS_TARGET; i ++)
    {
      /* Fork */
@@ -84,8 +84,6 @@
 /*
  *    Creates THREADS_TARGET amount of new threads
  *    The threads execute thread_function
- *    The threads are created with detached state so that their resources are
- *    automatically collected at exit
  *    Gets process number count as argument
  *
  *    Allocates a string based on count and thread number
@@ -112,7 +110,7 @@
        char base_str[] = " Stress tester process number, ";
        char base_str2[] = ", thread number, ";
        int len = strlen(base_str) + strlen(process_number) + strlen(base_str2)
-                  + strlen(thread_number) + 2; /* Line feed + terminator */
+                  + strlen(thread_number) + 1; /* terminator */
        char *message = malloc(len * sizeof(char));
 
        if (message != NULL) {
@@ -121,10 +119,8 @@
          strncat(message, process_number, strlen(process_number));
          strncat(message, base_str2, strlen(base_str2));
          strncat(message, thread_number, strlen(thread_number));
-         int index = strlen(message);
-         message[index] = '\n'; /* Add a line feed */
-         message[index + 1] = '\0';
 
+         /* Create new thread */
          ret = pthread_create(&threads[i], NULL, thread_function, (void *) message);
 
          if (ret != 0) {
@@ -167,7 +163,7 @@
      printf("SysLogger failed \n");
    }
 
-   /* Free the dynamicelly allocated pointer and exit*/
+   /* Free the dynamically allocated pointer and exit */
    free(message);
    pthread_exit(NULL);
 

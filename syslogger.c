@@ -1,7 +1,7 @@
 /*
  *    Author: Lauri Westerholm
  *
- *    Contains functions related to liblogger
+ *    Contains functions related to liblogger public interface
  */
 
  #include "syslogger.h"
@@ -33,7 +33,6 @@ int syslogger(const char *message)
     /*  Concat proc_name and pid to the message */
     if (concat_message(msg, pid_str, proc_name, message)) {
       /* The message was succesfully created */
-      //printf("%s\n", msg);
 
       /* Create the fifo */
       char *fifoname = syslogger_fifo(pid_str);
@@ -160,12 +159,12 @@ char *parse_proc_name(const char *line)
 
 /*
  *    Concats program name, pid and user message to one string
- *    Content is placed to dest buffer which size is MAX_BYTES
+ *    Content is placed to dest buffer which size is MAX_BYTES (pipes.h)
  *    Returns 1 if concat was successful, 0 if it failed
  *
  *    name and pid should take max 17 + 5 chars
  *    (kernel defines max proc name, TASK_COMM_LEN, to 16 bytes and then one
- *    tab is added in parse_proc_name) so they should always fit in dest
+ *    space is added in parse_proc_name) so they should always fit in dest
  */
 
 int concat_message(char *dest, const char *pid_str, const char *name, const char *msg)

@@ -18,7 +18,7 @@
 
 /*    Struct for linked list    */
 typedef struct list {
-  char fifoname[20];  /*  Fifonames take 20 bytes, check pipes.c */
+  char fifoname[21];  /*  Fifonames takes max 21 bytes, sysloggerxxxxxnxxxxx0 */
   char status;  /* 1 == struct matching pipe still active, 0 == pipe removed */
   struct list *next;
   struct list *prev;

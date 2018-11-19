@@ -46,7 +46,8 @@ int open_fifo_read(char *fifoname);
 char *syslogger_fifo(char *pid_str);
 void remove_fifo(char *fifoname);
 void concat_path(char *dest, const char *source);
-/* Old implementations, not used */
+
+/* Old implementation, not used */
 void create_fifo(void);
 
 

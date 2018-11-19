@@ -49,7 +49,7 @@ int main(int args, char *argv[])
  *    Creating SysLogger daemon process:
  *    Closes all excessive file descriptors
  *    Creates a child process using fork()
- *    Adds a new session (and group for the process) to the child
+ *    Adds a new session for the child
  *    The reforks and kills the middle parent switching the ownership of the final
  *    child process to the init process
  *    Changes working directory to root and redirects fd 0, 1, 2 to /dev/null
@@ -92,11 +92,9 @@ void start_SysLogger(void) {
 
   }
   else if (pid > 0) {
-    /* pid positive, parent process */
-    /*  exit from parent */
-    /*  This should inform user that fork was ok, so it should open a pipe
-        with a timeout, NOT IMPLEMTED */
+    /* pid positive, parent process, informs user */
     /* Use poll() to check when pipe has content to read, add 2 s timeout */
+
     close(pipe_fd[1]); /* Close write end of the pipe */
     struct pollfd poll_fd;
     poll_fd.fd = pipe_fd[0];
@@ -106,7 +104,7 @@ void start_SysLogger(void) {
     if (poll(&poll_fd, 1, 2000) > 0) {
       /* Success, read fd content (100 chars should be more than enough for the message) */
       char buffer[100] = "";
-      read(pipe_fd[0], &buffer, 100);
+      read(pipe_fd[0], &buffer, 99);
       close(pipe_fd[0]);
       printf("%s\n", buffer);
     }
@@ -160,7 +158,6 @@ void start_SysLogger(void) {
       /* Check if the program is already running (try to write pid to the pid file) */
       int ok = write_pid_file();
 
-      /* Write to the pipe that if daemon was successfully created  */
       close(pipe_fd[0]); /* Close read end of the pipe */
       struct pollfd poll_fd;
       poll_fd.fd = pipe_fd[1];

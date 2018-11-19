@@ -26,7 +26,7 @@ int open_log(char *log_name)
 
 
 /*
- *    Closes both the standard and error log
+ *    Closes both the standard and error logs
  *    Gets fds as argument, two integer array
  *    Doesn't check the return values because pretty much nothing
  *    can be done if close() fails
@@ -45,6 +45,8 @@ void close_logs(int fd[2])
  *
  *    localtime is not thread-safe but calling this function at the first place
  *    the calling thread has locked mutex
+ *
+ *    Note: adds a line feed to the message
  */
 
 void write_log_message(const char *message, int fd[2])
@@ -55,12 +57,14 @@ void write_log_message(const char *message, int fd[2])
   time_str[strlen(time_str) - 1] = ' '; /* Replace '\n' with ' ' */
 
   /* Now concat the two buffers */
-  int len = strlen(time_str) + strlen(message) + 1;
+  int len = strlen(time_str) + strlen(message) + 2; /* '\n' + '\0' */
   char *content = malloc(len * sizeof(char));
   if (content != NULL) {
 
     strncpy(content, time_str, strlen(time_str) +1); /* Add also null */
     strncat(content, message, strlen(message)); /* Writes strlen(message) + null */
+    content[len -2] = '\n';
+    content[len -1] = '\0';
 
     /*  Try to write the message */
     if ( write(fd[0], content, len - 1) < (len - 1)) {

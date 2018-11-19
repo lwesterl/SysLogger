@@ -4,8 +4,8 @@
  *    File contains functions related to creating and accessing pipes
  *    which the SysLogger program uses
  *
- *    Notice: The created public pipes are named as syslogger+pid() (pid of the
- *    program which created the pipe). The pipes are created to /tpm
+ *    Notice: The created public pipes are named as syslogger+pid()+n+tid() (pid,
+ *    tid of the program which created the pipe). The pipes are created to /tmp
  */
 
 #include "pipes.h"
@@ -86,6 +86,8 @@ void remove_fifo(char *fifoname)
  *    Two arguments: dest buffer, source buffer
  *    source buffer should contain sysloggerxxxxxnxxxxx string (strlen <= 20)
  *    dest buffer should have space for FIFO_NAME_LEN chars (and be empty)
+ *
+ *    Called from threading.c
  */
 void concat_path(char *dest, const char *source)
 {

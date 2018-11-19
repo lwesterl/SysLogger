@@ -54,9 +54,11 @@ void main_thread(void);
 int create_thread(char *pipe_name, pthread_t *threads);
 void *blocker_thread(void *ptr);
 void list_files(list_t *list);
+void make_clean_exit(list_t *list, int exit_reason);
+
+/* Not used */
 void cancel_all (list_t *list);
 void cancel_non_active (list_t *list);
-void make_clean_exit(list_t *list, int exit_reason);
 
 
 /* In signal_handler.c */

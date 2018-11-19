@@ -5,7 +5,7 @@
  *    Only for test use
  */
 
-#include "list.h"
+#include "../src/list.h"
 #include <assert.h>
 
 int main(void)

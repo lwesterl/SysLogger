@@ -1,85 +1,91 @@
 #		Author: Lauri Westerholm
-#		Makefile for SysLogger program (library)
+#		Makefile for SysLogger program
 #		Creates a static library named liblogger.a
 #		pthreads used -> link with -lpthread
-#		Creates a library test executable named as test_logger
+
+# 	Creates two main executables: SysLogger and Stress_tester
 
 
 CC = gcc
 CFLAGS = -Wall -pedantic
 DFLAGS = -Wall -pedantic -g
-Files = lib stress_tester
+SRC = src/
+TEST = test/
+PRIMARY = lib Stress_tester
 O_FILES = threading.o pipes.o list.o signal_handler.o log.o syslogger.o
 STATIC_F = ar rcs
 LPTH = -lpthread
-DEBUG = list_debug pipe_debug thread_debug log_debug test_logger stress_debug
-EXE = test_logger thread_test list_test pipe_test SysLogger log_test Stress_tester stress_debug
-DEXE = test_logger thread_test list_test pipe_test log_test stress_debug
+LINKER = -L. -llogger -lpthread
+EXE = SysLogger Stress_tester
+DEXE = thread_test list_test pipe_test log_test stress_debug
 VALG = valgrind --leak-check=yes
 
 default:	all
 
-all:	$(Files)
-	$(CC) $(CFLAGS) -static create_daemon.c -L. -llogger $(LPTH) -o SysLogger
+# Normal files
 
-lib:	$(O_FILES) logger_header.h
-	$(STATIC_F) liblogger.a ${O_FILES}
+all: $(O_FILES) $(PRIMARY)
+	$(CC) $(CFLAGS) -static $(SRC)create_daemon.c $(LINKER) -o SysLogger
 
-stress_tester: $(lib) stress_test.h
-	$(CC) $(CFLAGS) -static stress_test.c -L. -llogger $(LPTH) -o Stress_tester
+lib:	$(O_FILES)
+	 $(STATIC_F) liblogger.a ${O_FILES}
 
-threading.o:	logger_header.h
-	$(CC) $(CFLAGS) $(LPTH) -c threading.c
+Stress_tester: $(lib)
+	$(CC) $(CFLAGS) -static $(SRC)stress_test.c $(LINKER) -o Stress_tester
 
-pipes.o:	pipes.h
-	$(CC) $(CFLAGS) -c pipes.c
+threading.o:
+	$(CC) $(CFLAGS) -c $(SRC)threading.c
 
-list.o:	list.h
-	$(CC) $(CFLAGS) -c list.c
+pipes.o:
+	$(CC) $(CFLAGS) -c $(SRC)pipes.c
 
-signal_handler.o: logger_header.h
-	$(CC) $(CFLAGS) -c signal_handler.c
+list.o:
+	$(CC) $(CFLAGS) -c $(SRC)list.c
 
-log.o: log.h
-	$(CC) $(CFLAGS) -c log.c
+signal_handler.o:
+	$(CC) $(CFLAGS) -c $(SRC)signal_handler.c
 
-syslogger.o: syslogger.h
-	$(CC) $(CFLAGS) -c syslogger.c
+log.o:
+	$(CC) $(CFLAGS) -c $(SRC)log.c
 
-#		CLEAN
+syslogger.o:
+	$(CC) $(CFLAGS) -c $(SRC)syslogger.c
+
+# Debug files
+
+debug:	$(DEXE) $(stress_debug)
+
+thread_test: $(O_FILES)
+	$(CC) $(DFLAGS) ${O_FILES} $(TEST)logger_test.c $(LPTH) -o thread_test
+
+list_test:	$(list.o)
+	$(CC) $(DFLAGS) list.o $(TEST)list_test.c -o list_test
+
+pipe_test:	$(pipe.o)
+	$(CC) $(DFLAGS) pipes.o $(TEST)pipes_test.c -o pipe_test
+
+log_test:	$(log.o)
+	$(CC) $(DFLAGS) log.o $(TEST)log_test.c -o log_test
+
+stress_debug:
+	$(CC) $(DFLAGS) $(SRC)syslogger.c $(SRC)pipes.c $(SRC)stress_test.c $(LPTH) -o stress_debug
+
+# Clean
 
 clean:
-	$(RM) ${O_FILES} ${EXE} liblogger.a
-
-clean-objects:
-	$(RM) ${O_FILES}
+	$(RM) ${EXE} ${DEXE} ${O_FILES} liblogger.a
 
 clean-debug:
 	$(RM) ${DEXE}
 
+clean-objects:
+	$(RM) ${O_FILES}
 
-#		DEBUG BUILDS
+clean-lib:
+	$(RM) liblogger.a
 
-debug: $(DEBUG)
 
-test_logger: lib
-	$(CC) $(CFLAGS) logger_test.c -L. -llogger $(LPTH) -o test_logger
-
-list_debug: list.h
-	$(CC) $(DFLAGS) list.c list_test.c -o list_test
-
-pipe_debug:	pipes.h
-	$(CC) $(DFLAGS) pipes.c pipes_test.c threading.c signal_handler.c list.c log.c $(LPTH) -o pipe_test
-
-thread_debug: logger_test.h
-	$(CC) $(DFLAGS) logger_test.c pipes.c list.c signal_handler.c log.c threading.c  $(LPTH) -o thread_test
-
-log_debug: log.h
-	$(CC) $(DFLAGS) log_test.c log.c -o log_test
-
-stress_debug: stress_test.h
-	$(CC) $(DFLAGS) stress_test.c syslogger.c pipes.c  $(LPTH) -o stress_debug
-
+# Valgrind commands
 
 test_memory:	thread_test
 	$(VALG) ./thread_test

@@ -5,7 +5,7 @@
  *    Not a part of the SysLogger program (just for testing)
  */
 
-#include "log.h"
+#include "../src/log.h"
 
 
 /*
@@ -15,6 +15,8 @@
 
 int main(void)
 {
+  printf("Writes a few log entries to /var/tmp/SysLogger.log\n");
+  printf("Writes also an entry to the error log /var/tmp/SysLogger_error.log\n");
   int fd_logs[2];
 
   fd_logs[0] = open_log(LOG_FILE_NAME);

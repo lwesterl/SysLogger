@@ -5,12 +5,13 @@
  *    Not part of the final SysLogger program
  */
 
-#include "pipes.h"
+#include "../src/pipes.h"
 
 
 
 int main(void)
 {
+  printf("Tries to create one fifo to /tmp\n");
   create_fifo();
   return 0;
 }

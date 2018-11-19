@@ -25,13 +25,13 @@ default:	all
 # Normal files
 
 all: $(O_FILES) $(PRIMARY)
-	$(CC) $(CFLAGS) -static $(SRC)create_daemon.c $(LINKER) -o SysLogger
+	$(CC) $(CFLAGS) $(SRC)create_daemon.c $(LINKER) -o SysLogger
 
 lib:	$(O_FILES)
 	 $(STATIC_F) liblogger.a ${O_FILES}
 
 Stress_tester: $(lib)
-	$(CC) $(CFLAGS) -static $(SRC)stress_test.c $(LINKER) -o Stress_tester
+	$(CC) $(CFLAGS) $(SRC)stress_test.c $(LINKER) -o Stress_tester
 
 threading.o:
 	$(CC) $(CFLAGS) -c $(SRC)threading.c

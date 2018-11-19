@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <signal.h>
 #include "list.h"
+#include "syslogger.h" /* MAX_BYTES macro defined there */
 
 
 /*    MACROS    */
@@ -30,10 +31,10 @@
 /*  Fifo open modes, read mode and write mode, stored as an unsigned char */
 #define FIFO_READ 1
 #define FIFO_WRITE 2
-/* Max amount of bytes that can be written/read from fifo */
-#define MAX_BYTES 200
 /* Fifo name max length ( /tmp/sysloggerxxxxxnxxxxx0, 0 == '\0' ) */
 #define FIFO_NAME_LEN 26
+/* Max amount of bytes that can be written/read from fifo */
+#define MAX_BYTES 200
 
 
 /*    Global variables  */

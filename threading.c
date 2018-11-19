@@ -8,9 +8,11 @@
 
 /* Global variables */
 
-volatile sig_atomic_t terminated = 0;
+volatile sig_atomic_t terminated = 0; /* 1 -> the program should stop */
 int logs_fd[2]; /* File descriptors to the log files */
 pthread_mutex_t write_mutex; /* A mutex used to control the log writing */
+sigset_t block_set; /* Signal set used in blocker threads */
+
 
 
 
@@ -51,6 +53,12 @@ void main_thread(void)
 
   list_t *list = List();
   list_t *list_begin = list; /* Pointer to the start of the list */
+
+  /*  Block SIGINT and SIGTERM delivery to blocker threads, the main thread
+  handles those  */
+  sigemptyset(&block_set);
+  sigaddset(&block_set, SIGINT);
+  sigaddset(&block_set, SIGTERM);
 
   /*  Execute this loop until terminated by SIGTERM */
 
@@ -133,6 +141,14 @@ int create_thread(char *pipe_name, pthread_t *threads)
 
 void *blocker_thread(void *ptr)
 {
+  /*  Block SIGINT and SIGTERM, let the main thread handle those */
+  if (pthread_sigmask(SIG_BLOCK, &block_set, NULL) != 0)
+  {
+    /* Error, which shouldn't happen */
+    free(ptr);
+    pthread_exit(NULL);
+  }
+
   /* Set cancel state to asynchronous */
   /* However, threads should be always let to itself cancel otherwise race
     conditions may occur */
@@ -361,6 +377,8 @@ void make_clean_exit(list_t *list, int exit_reason)
   remove_all(list_begin);
 
   /* Destroy the mutex */
+  pthread_mutex_lock(&write_mutex);
+  pthread_mutex_unlock(&write_mutex);
   pthread_mutex_destroy(&write_mutex);
 
   if (exit_reason == THREAD_CREATION_ERROR_EXIT) {

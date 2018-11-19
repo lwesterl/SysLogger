@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <signal.h>
 #include "list.h"
-#include "syslogger.h" /* MAX_BYTES macro defined there */
 
 
 /*    MACROS    */

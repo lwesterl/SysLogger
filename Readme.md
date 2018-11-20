@@ -52,6 +52,7 @@ Own implementation of the syslog daemon and an associated library
    2. If SysLogger isn't running: _SysLogger isn't running at the moment_
    3. If stress test fails: _SysLogger failed_
    4. Otherwise, test entries should be written to /var/tmp/SysLogger.log
+   5. Notice: Stress_tester cannot be interrupted with CTRL-C
 
 4. Using SysLogger elsewhere
    1. Include src/syslogger.h (and src/pipes.h, syslogger.h needs also this)

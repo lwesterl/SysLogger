@@ -12,7 +12,8 @@
 volatile sig_atomic_t terminated = 0; /* 1 -> the program should stop */
 int logs_fd[2]; /* File descriptors to the log files */
 pthread_mutex_t write_mutex; /* A mutex used to control the log writing */
-sigset_t block_set; /* Signal set used in blocker threads */
+pthread_mutex_t remove_mutex; /* A mutex used to control fifo removal */
+sigset_t block_set; /* Signal set used to block signals  */
 
 
 
@@ -41,6 +42,7 @@ void main_thread(void)
 
   /* Init a mutex to synchronize log writing */
   pthread_mutex_init(&write_mutex, NULL); /* Default mutex attributes */
+  pthread_mutex_init(&remove_mutex, NULL);
 
   /* Connect a real basic signal handler */
   struct sigaction sig_action = {.sa_handler = signal_handler};
@@ -118,12 +120,7 @@ int create_thread(char *pipe_name, pthread_t *threads)
     /* Error creating the thread */
     return -1;
   }
-  /* Create a new thread */
-  if (terminated) {
-    free(pipe_name);
-    free(threads);
-    return -1;
-  }
+
   int ret = pthread_create( threads, &attr, blocker_thread, (void *) pipe_name);
   pthread_attr_destroy(&attr);
   return ret;
@@ -141,14 +138,10 @@ int create_thread(char *pipe_name, pthread_t *threads)
 
 void *blocker_thread(void *ptr)
 {
-  /*  Block SIGINT and SIGTERM, let the main thread handle those */
-  if (pthread_sigmask(SIG_BLOCK, &block_set, NULL) != 0)
-  {
-    /* Error, which shouldn't happen */
-    free(ptr);
-    pthread_exit(NULL);
-  }
-
+  /*  Block SIGINT and SIGTERM, let the main thread handle those.
+      But threads inherit copy of parent sigmask and parent is currently
+      blocking SIGINT and SIGTERM    */
+  
   /*  Acquire pipename from casting the input */
   char *pipename = (char *) ptr;
 
@@ -171,7 +164,9 @@ void *blocker_thread(void *ptr)
 
     pthread_mutex_unlock(&write_mutex);
     /* Remove the fifo and free the memory allocated for pipename */
+    pthread_mutex_lock(&remove_mutex);
     remove_fifo(pipename);
+    pthread_mutex_unlock(&remove_mutex);
     pthread_exit(NULL);
 
   }
@@ -198,14 +193,18 @@ void *blocker_thread(void *ptr)
       /* Program terminated, exit */
       close(fd);
       /* Remove the fifo and free the memory allocated for pipename */
+      pthread_mutex_lock(&remove_mutex);
       remove_fifo(pipename);
+      pthread_mutex_unlock(&remove_mutex);
       pthread_exit(NULL);
     }
     else if (errno != EAGAIN && bytes_read < 0) {
       /* Some fatal error exit, shouldn't happen */
       close(fd);
       /* Remove the fifo and free the memory allocated for pipename */
+      pthread_mutex_lock(&remove_mutex);
       remove_fifo(pipename);
+      pthread_mutex_unlock(&remove_mutex);
       pthread_exit(NULL);
     }
     else if ((elapsed_time.tv_sec > start_time.tv_sec + 1) &&
@@ -213,7 +212,9 @@ void *blocker_thread(void *ptr)
       /* usecs need to be checked also to keep the timeout exactly at 2 sec */
       close(fd);
       /* Remove the fifo and free the memory allocated for pipename */
+      pthread_mutex_lock(&remove_mutex);
       remove_fifo(pipename);
+      pthread_mutex_unlock(&remove_mutex);
       pthread_exit(NULL);
     }
     /* Update elapsed_time */
@@ -226,11 +227,14 @@ void *blocker_thread(void *ptr)
   pthread_mutex_lock(&write_mutex);
   write_log_message(content, logs_fd);
   pthread_mutex_unlock(&write_mutex);
-
   /* Exit without stopping other threads */
   close(fd);
   /* Remove the fifo and free the memory allocated for pipename */
+  pthread_mutex_lock(&remove_mutex);
   remove_fifo(pipename);
+  pthread_mutex_unlock(&remove_mutex);
+
+
 
   pthread_exit(NULL);
 }
@@ -257,8 +261,18 @@ void list_files(list_t *list)
   /*  Open /tmp */
   dirp = opendir("/tmp");
 
+  /* Block SIGINT and SIGTERM */
+  if (pthread_sigmask(SIG_BLOCK, &block_set, NULL) != 0)
+  {
+    make_clean_exit(list, THREAD_CREATION_ERROR_EXIT);
+  }
+
   if (dirp) {
     /* Go through dir content */
+
+    /* Check if the list contains the fifo */
+    pthread_mutex_lock(&remove_mutex);
+
     while ((dir_object = readdir(dirp)) != NULL)
     {
       /*  Pick only named pipes, fifos  */
@@ -266,8 +280,6 @@ void list_files(list_t *list)
         if (strstr(dir_object->d_name, "syslogger")) {
 
           /* Pipe is created by the program */
-
-          /* Check if the list contains the fifo */
 
           if (is_entry(list, dir_object->d_name) == 0 && !terminated ) {
 
@@ -282,16 +294,24 @@ void list_files(list_t *list)
             /*  Create a new thread which gets pipename as argument */
             if ( create_thread(pipename, new->thread) != 0 ) {
               /* Failed, now program should exit gracefully */
+              pthread_mutex_unlock(&remove_mutex);
               make_clean_exit(start, THREAD_CREATION_ERROR_EXIT);
             }
 
           }
           list = start; /* Set list back to the start of the list */
+
         }
 
       }
     }
+    pthread_mutex_unlock(&remove_mutex);
     closedir(dirp);
+  }
+  /* Unblock signals */
+  if (pthread_sigmask(SIG_UNBLOCK, &block_set, NULL) != 0)
+  {
+    make_clean_exit(list, THREAD_CREATION_ERROR_EXIT);
   }
 
 }

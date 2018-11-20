@@ -43,20 +43,37 @@ void close_logs(int fd[2])
  *    Fds to the logs as array of two integers (fd[0] std log, fd[1] err log)
  *    If writing fails, writes entry to the error log
  *
- *    localtime is not thread-safe but calling this function at the first place
- *    the calling thread has locked mutex
- *
+ *    Messages are timestamped with millisecond precision
  *    Note: adds a line feed to the message
  */
 
 void write_log_message(const char *message, int fd[2])
 {
-  /* Get current time */
-  time_t time_now = time(NULL);
-  char *time_str = asctime(localtime(&time_now));
-  time_str[strlen(time_str) - 1] = ' '; /* Replace '\n' with ' ' */
+  struct timespec curr_time;
+  clock_gettime(CLOCK_REALTIME, &curr_time);
+  struct tm local_time;
 
-  /* Now concat the two buffers */
+  /* Get local time */
+  time_t t = curr_time.tv_sec;
+  localtime_r(&t, &local_time);
+  char time_str[120]; /* This should be always enough */
+  strftime(time_str, 120, "%A %Y-%m-%d %H:%M:%S", &local_time);
+  int time_len = strlen(time_str);
+  /* Convert nano seconds to millis and to string format */
+  char millis[4] = "";
+  snprintf(millis, 4, "%ld", curr_time.tv_nsec / 1000000);
+  /* Concat the time buffers */
+  time_str[time_len] = ':';
+  time_len ++;
+  time_str[time_len] = '\0';
+  time_len ++;
+  strncat(time_str, millis, 100 - time_len);
+  time_len = strlen(time_str);
+  /* Add a space to the end and new terminator */
+  time_str[time_len] = ' ';
+  time_str[time_len + 1] = '\0';
+
+  /* Now concat the time to the message */
   int len = strlen(time_str) + strlen(message) + 2; /* '\n' + '\0' */
   char *content = malloc(len * sizeof(char));
   if (content != NULL) {

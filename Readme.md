@@ -91,13 +91,13 @@ Own implementation of the syslog daemon and an associated library
   ### src/threading.c & src/logger_header.h
     * Contains functions for the main thread and 'blocker_threads'
     * Main thread creates other threads and handles incoming signals
-    * 'blocker_threads' read fifos created by _syslogger_
+    * 'blocker_threads' read fifos created by syslogger()
     * After receiving message they lock mutex and write messages to the log
     * blocker_threads remove old fifos after acquiring a mutex before they exit
 
   ### src/syslogger.c & src/syslogger.h
     * Contains SysLogger Public interface
-    * _syslogger_ which handles connecting to the daemon is defined here
+    * syslogger() which handles connecting to the daemon is defined here
     * Contains also multiple string processing helper functions
 
   ### src/list.c & src/list.h
@@ -119,23 +119,21 @@ Own implementation of the syslog daemon and an associated library
 
   ### test/list_test.c
     * Test main for the linked list
-    * _list_test_
+    * ./list_test
 
   ### test/logger_test.c & test/logger_test.h
     * Basically SysLogger without daemon process creation
-    * _thread_test_
+    * ./thread_test
     * Stop with CTRL-C (only for testing)
-    * Used with _stress_debug_
+    * Used with ./tress_debug
     * make test_memory (if not called first /tmp will contain 500 fifos), make test_stress_test
 
   ### test/pipes_test.c
     * Used to test fifo creation
-    * _pipe_test_
+    * ./pipe_test
     * Creates a fifo: /tmp/syslogger + pid
 
   ### test/log_test.c
     * Used to test log writing
-    * _log_test_
+    * ./log_test
     * Writes test log entries to /var/tmp/SysLogger.log and /var/tmp/SysLogger_error.log
-
-  ### test/

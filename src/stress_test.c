@@ -101,10 +101,10 @@
      {
        /* Create a thread number buffer from the current i value, i max 99 */
        char thread_number[3] = "";
-       snprintf(thread_number, 3, "%d", i);
+       snprintf(thread_number, 3, "%d", i + 1);
        /* Create a process number buffer from count, count max 99 */
        char process_number[3] = "";
-       snprintf(process_number, 3, "%d", count);
+       snprintf(process_number, 3, "%d", count + 1);
 
        /* Concat the buffers to base strings */
        char base_str[] = " Stress tester process number, ";

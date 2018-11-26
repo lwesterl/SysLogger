@@ -169,7 +169,7 @@ void start_SysLogger(void) {
 
         if (ok) {
           /* New daemon created */
-          char message[] = "SysLogger daemon succesfully started";
+          char message[] = "SysLogger daemon successfully started";
           write(pipe_fd[1], &message, strlen(message));
           close(pipe_fd[1]);
         }

@@ -104,7 +104,7 @@ Own implementation of the syslog daemon and an associated library
     * Contains doubly linked list implementation
     * This linked list is used by the main thread to store pointers to all other threads
 
-  ### src/pipe.c & src/pipe.h
+  ### src/pipes.c & src/pipes.h
     * Contains functions related to opening, closing and creating pipes (fifos)
 
   ### src/log.c & src/log.h

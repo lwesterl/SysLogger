@@ -84,7 +84,7 @@ Own implementation of the syslog daemon and an associated library
     * In this case _syslogger_ will return after 2s with 0 as return value
     * /tmp will also contain en extra fifo which won't be removed by the program
     * To overcome the issue, add delays between multiple _syslogger_ calls
-      * Recommend to at at least 10 000 µs
+      * It's recommend to add at least 10 000 µs
     * Another options is call _syslogger_ from multiple threads (then there is no issue)
 
 

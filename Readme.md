@@ -78,6 +78,15 @@ Own implementation of the syslog daemon and an associated library
     * During stress testing SysLogger has been tested with 500 simultaneous senders without problems
   * _syslogger_ is thread-safe
   * The log messages are written with millisecond precision
+  * If _syslogger_ is called from same process and thread multiple times it won't
+    work like intended if it's called continuously
+    * This limitation is caused by limited disk write & read speed
+    * In this case _syslogger_ will return after 2s with 0 as return value
+    * /tmp will also contain en extra fifo which won't be removed by the program
+    * To overcome the issue, add delays between multiple _syslogger_ calls
+      * Recommend to at at least 10 000 µs
+    * Another options is call _syslogger_ from multiple threads (then there is no issue)
+
 
 
 ## Brief File Content Description
